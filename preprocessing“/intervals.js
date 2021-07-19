@@ -1,12 +1,12 @@
-//definisco gli intervalli temporali
+//definisco gli intervalli temporali in cui verranno aggregate le immagini
 
-//intervallo 2
+//intervallo 2 (l'anno è diviso in 2 intervalli da 6 mesi)
 exports.primaMeta = function(){
   return ee.DateRange ('2020-01-01', '2020-07-02')};
 exports.secondaMeta = function (){
   return ee.DateRange ('2020-07-02','2020-12-31')}; 
   
-//intervallo 3
+//intervallo 3 (l'anno è diviso in 3 intervalli da 4 mesi)
 exports.un_terzo = function (){
   return ee.DateRange('2020-01-01', '2020-04-30')};
 exports.due_terzi = function (){
@@ -14,7 +14,7 @@ exports.due_terzi = function (){
 exports.tre_terzi = function (){
   return ee.DateRange('2020-08-29', '2020-12-31')};
 
-//intervallo 4
+//intervallo 4 (l'anno è diviso in 4 intervalli da 3 mesi)
 exports.un_quarto = function (){
   return ee.DateRange ('2020-01-01','2020-03-31')};
 exports.due_quarti = function (){
@@ -24,7 +24,7 @@ exports.tre_quarti = function (){
 exports.quattro_quarti = function (){
   return ee.DateRange ('2020-09-30','2020-12-31')};
 
-//intervallo 6
+//intervallo 6 (l'anno è diviso in 6 intervalli da 2 mesi)
 exports.bimestre1 = function (){
   return ee.DateRange ('2020-01-01','2020-02-29')};
 exports.bimestre2 = function (){
@@ -39,7 +39,7 @@ exports.bimestre6 = function (){
   return ee.DateRange ('2020-10-31', '2020-12-31')};
 
 
-//intervallo 12
+//intervallo 12 (l'anno è diviso in 12 intervalli di 1 mese)
 exports.gennaio = function (){
   return ee.DateRange ('2020-01-01','2020-01-31')};
 exports.febbraio = function (){
