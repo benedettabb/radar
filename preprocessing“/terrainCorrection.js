@@ -1,16 +1,20 @@
-//importo l'area di interesse
+//https://code.earthengine.google.com/44a1d10e3dbe1731f30d4e2ab70e8d5d//
+//da Angular-Based Radiometric Slope Correction for Sentinel-1 on Google Earth Engine, Andreas Vollrath, Adugna Mullissa and Johannes Reiche
+
+
+//è richiesta l'area di interesse (solo per fornire una geometria per ritagliare l'SRTM)
+//cambiare path se necessario!
 var roi = require("users/bene96detta/AnalysisReadyData:preprocessing/area");
 roi = roi.addRegion();
 
-// Implementation by Andreas Vollrath (ESA), inspired by Johannes Reiche (Wageningen)
+//funzione che, a partire da un'immagine radar, restituisce come output la stessa immagine con valori radiometrici normalizzati rispetto alla topografia del terreno
 exports.terrainCorrection = function (image) { 
   var srtm = ee.Image('USGS/SRTMGL1_003').clip(roi); // 30m srtm 
   //sigma0Pow = NORMALIZER RADAR CROSS SECTION
   var sigma0Pow = ee.Image.constant(10).pow(image.divide(10.0));
 
   /*RADAR GEOMETRY
-  θi = INCIDENT ANGLE:
-  angolo tra la normale alla superficie e la direzione del backscatter*/
+  θi = INCIDENT ANGLE: angolo tra la normale alla superficie e la direzione del backscatter*/
   var theta_i = image.select('angle');
   // ϕi = RANGE DIRECTION: angolo orizzontale piano rispetto al nord
   var phi_i = ee.Terrain.aspect(theta_i)
@@ -46,19 +50,19 @@ exports.terrainCorrection = function (image) {
 
 
   // Gamma_nought_flat = coefficiente di backscattering con terreno piatto
-  //sigma0Pow = NORMALIZER RADAR CROSS SECTION
   var gamma0 = sigma0Pow.divide(theta_iRad.cos());
   var gamma0dB = ee.Image.constant(10).multiply(gamma0.log10());
   var ratio_1 = gamma0dB.select('VV').subtract(gamma0dB.select('VH'));
 
   // Volumetric Model
+  //γ0f=γ0tan(90−θi)/tan(90−θi+αr)
   var nominator = (ninetyRad.subtract(theta_iRad).add(alpha_r)).tan();
   var denominator = (ninetyRad.subtract(theta_iRad)).tan();
   /*rapporto tra il volume osservato in un terreno inclinato e il volume che 
   sarebbe osservato se il terreno fosse piatto*/
   var volModel = (nominator.divide(denominator)).abs();
 
-  // apply model
+  // applica il modello
   var gamma0_Volume = gamma0.divide(volModel);
   var gamma0_VolumeDB = ee.Image.constant(10).multiply(gamma0_Volume.log10());
 
@@ -70,7 +74,7 @@ exports.terrainCorrection = function (image) {
   // SHADOWS = LIA > 90
   var shadow = theta_liaDeg.lt(85);
 
-  // calculate the ratio for RGB vis
+  // calcolo del rapporto per la visualizzazione in RGB
   var ratio = gamma0_VolumeDB.select('VV').subtract(gamma0_VolumeDB.select('VH'));
 
   var output = gamma0_VolumeDB.addBands(ratio).addBands(alpha_r).addBands(phi_s).addBands(theta_iRad)
