@@ -1,5 +1,8 @@
+//Sentinel-1-Imagery-Based High-ResolutionWater Cover Detection on Wetlands, Aided by Google Earth Engine, András Gulácsi and Ferenc Kovács
+//https://github.com/SalsaBoy990/gee_s1_sar_wetlands
 // The RL speckle filter from https://code.earthengine.google.com/2ef38463ebaf5ae133a478f173fd0ab5
 // by Guido Lemoine
+
 exports.refinedLee = function (img) {
   // img must be in natural units, i.e. not in dB!
   // Set up 3x3 kernels 
