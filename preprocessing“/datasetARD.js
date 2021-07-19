@@ -1,22 +1,24 @@
-//ARD dataset
+//Analysis Ready Data 
 
-//import area of interest
+//importare i moduli (cambiare path se necessario)
+
+//area d'interesse
 var roi = require("users/bene96detta/AnalysisReadyData:preprocessing/area");
 roi = roi.addRegion();
 
-//import intervals
+//intervalli temporali
 var intervals = require("users/bene96detta/AnalysisReadyData:preprocessing/intervals");
 
-//import function to convert to/from dB
+//funzione per convertire to/from dB
 var from_to_dB = require("users/bene96detta/AnalysisReadyData:preprocessing/from_to_dB")
 
-//import terrain correction
+//terrain correction
 var tC = require ("users/bene96detta/AnalysisReadyData:preprocessing/terrainCorrection");
 
-//import refined lee filter
+//refined lee filter
 var lee = require ("users/bene96detta/AnalysisReadyData:preprocessing/refinedLeeFilter");
 
-//import multi temp function
+//multi temp function
 var mTF = require ("users/bene96detta/AnalysisReadyData:preprocessing/multiTempFilter");
 
 //dataset
@@ -24,17 +26,15 @@ var s1 = ee.ImageCollection ("COPERNICUS/S1_GRD")
   .filterBounds(roi)
   .filterDate ('2020-01-01', '2021-01-01')
   .filter(ee.Filter.eq('instrumentMode', 'IW'))
-  .map(function(image){return image.clip(roi)})
+  .map(function(image){return image.clip(roi)}) //ritaglia l'immagine sull'area di interesse
 
-//orbite ascendenti e discendenti
+//separa le orbite ascendenti e quelle discendenti
 var s1asc = s1.filter(ee.Filter.eq('orbitProperties_pass', 'ASCENDING'))
 var s1desc = s1.filter(ee.Filter.eq('orbitProperties_pass', 'DESCENDING'))
-
 //Map.addLayer (s1asc, {}, 's1 asc')
 //Map.addLayer (s1desc, {}, 's1 desc')
 
-
-//intervals over the year
+//aggrega le immagini per ogni intervallo, facendo la media del valore di backscatter per ogni pixel
 //INTERVAL 1 = a
 var a_asc = s1asc.mean()
 var a_desc = s1desc.mean()
@@ -104,8 +104,7 @@ var fl_asc = s1asc.filterDate(intervals.dicembre()).mean()
 var fl_desc = s1desc.filterDate(intervals.dicembre()).mean() 
 
 
-//apply terrainCorrection to image collection
-//per ogni intervallo (solo orbite ascendenti) è stata creata una collezione di immagini
+//per ogni intervallo (solo orbite ascendenti) viene creata una collezione di immagini
 //la funzione terrainCorrection viene applicata ad ogni immagine nella collezione 
 var COLLECTION2_asc = ee.ImageCollection ([ba_asc, bb_asc]).map(tC.terrainCorrection);
 var COLLECTION3_asc = ee.ImageCollection ([ca_asc, cb_asc, cc_asc]).map(tC.terrainCorrection);
@@ -115,7 +114,7 @@ var COLLECTION12_asc = ee.ImageCollection ([fa_asc, fb_asc, fc_asc, fd_asc, fe_a
   fi_asc, fj_asc, fk_asc, fl_asc]).map(tC.terrainCorrection)
   
 
-//apply refinedLeeFilter
+//applica il refinedLeeFilter ad ongi immagine in ogni collezione
 var COLLECTION2_asc_filtered = COLLECTION2_asc.map(mTF.MultiTempFilter)
 var COLLECTION3_asc_filtered = COLLECTION2_asc.map(mTF.MultiTempFilter)
 var COLLECTION4_asc_filtered = COLLECTION2_asc.map(mTF.MultiTempFilter)
@@ -133,7 +132,7 @@ print(img_corr, 'immagine corretta con SRTM')
 //prima immagine FILTRATA
 var img_filtered = COLLECTION2_asc_filtered.first()
 print(img_filtered, 'immagine filtrata')
-//LE INSERISCO NELLA MAPPA PER VEDERE LA DIFFERENZA
+//le aggiungo alla mappa per confrontarle
 Map.addLayer(img_NOcorr, {min: -20, max: 0, bands: ['VV','VH', 'angle']}, 'media')
 Map.addLayer (img_corr, {min:-20, max:0, bands:['VV','VH','angle']}, 'corretta')
 Map.addLayer (img_filtered, {min:-20, max:0, bands: ['VV_filtered', 'VH_filtered','angle']}, 'filtrata')
