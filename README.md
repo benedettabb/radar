@@ -8,8 +8,8 @@ intervals              --------------->
 
 from_to_dB             ------------->                           Analysis Ready Dataset 
                                        
-terrainCorrection      ----------->
+terrainCorrection      --------->
 
-refinedLeeFilter       ----------->
+refinedLeeFilter       ---------->
 
-multiTempFilter        ------------->
+multiTempFilter        ------------>
