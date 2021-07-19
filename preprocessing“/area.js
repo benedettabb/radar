@@ -1,5 +1,5 @@
 //AREA OF INTEREST
-//sentinel 2- tile number field: T32TQN, T33TUJ, T32TUH, T33TUH
+//l'area di interesse è definita da quattro immagini sentinel 2. Tile number field: T32TQN, T33TUJ, T32TUH, T33TUH
 var s2 = ee.ImageCollection("COPERNICUS/S2_SR")
   .filterBounds (point)
   .filterDate ('2020-01-01', '2021-01-01')
