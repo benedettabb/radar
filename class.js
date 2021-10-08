@@ -1,4 +1,5 @@
 
+Map.addLayer(pu)
 var s2 = require("users/bene96detta/radar:data/s2")
 var s2201509 = s2.s2201509_ndvi()
 var s2201512 = s2.s2201512_ndvi()
@@ -12,7 +13,7 @@ var s2201909 = s2.s2201909_ndvi()
 var s2201912 = s2.s2201912_ndvi()
 var s2202009 = s2.s2202009_ndvi()
 var s2202012 = s2.s2202012_ndvi()
-  
+
 var dem = ee.Image("CGIAR/SRTM90_V4")
 Map.addLayer(dem.select('elevation'),{},'dem')
 var usoSuolo = usoDelSuolo1.merge(usoDelSuolo2).merge(usoDelSuolo3).merge(usoDelSuolo4)
@@ -83,23 +84,21 @@ var s2202012 = s2202012.select(['B2','B3','B4','B5','B6','B7','B8','NDVI','NDBI'
 
 
 //totale immagini da classificare
-var tot201410 = ee.Image.cat ([asc201410, asc201410dec, s2201509]).clip(fano)
-var tot201412 = ee.Image.cat ([asc201412, asc201412dec, s2201512]).clip(fano)
-var tot201509 = ee.Image.cat ([asc201509, asc201509dec, s2201509]).clip(fano)
-var tot201512 = ee.Image.cat ([asc201512, asc201512dec, s2201512]).clip(fano)
-var tot201609 = ee.Image.cat ([asc201609, asc201609dec, s2201609]).clip(fano)
-var tot201612 = ee.Image.cat ([asc201612, asc201612dec, s2201612]).clip(fano)
-var tot201708 = ee.Image.cat ([asc201708, asc201708dec, s2201709]).clip(fano)
-var tot201712 = ee.Image.cat ([asc201712, asc201712dec, s2201712]).clip(fano)
-var tot201809 = ee.Image.cat ([asc201809, asc201809dec, s2201809]).clip(fano)
-var tot201812 = ee.Image.cat ([asc201812, asc201812dec, s2201812]).clip(fano)
-var tot201909 = ee.Image.cat ([asc201909, asc201909dec, s2201909]).clip(fano)
-var tot201912 = ee.Image.cat ([asc202001, asc202001dec, s2201912]).clip(fano)
-var tot202009 = ee.Image.cat ([asc202009, asc202009dec, s2202009]).clip(fano)
-var tot202012 = ee.Image.cat ([asc202012, asc202012dec, s2202012]).clip(fano)
+var tot201410 = ee.Image.cat ([asc201410, asc201410dec, s2201509]).clip(pu)
+var tot201412 = ee.Image.cat ([asc201412, asc201412dec, s2201512]).clip(pu)
+var tot201509 = ee.Image.cat ([asc201509, asc201509dec, s2201509]).clip(pu)
+var tot201512 = ee.Image.cat ([asc201512, asc201512dec, s2201512]).clip(pu)
+var tot201609 = ee.Image.cat ([asc201609, asc201609dec, s2201609]).clip(pu)
+var tot201612 = ee.Image.cat ([asc201612, asc201612dec, s2201612]).clip(pu)
+var tot201708 = ee.Image.cat ([asc201708, asc201708dec, s2201709]).clip(pu)
+var tot201712 = ee.Image.cat ([asc201712, asc201712dec, s2201712]).clip(pu)
+var tot201809 = ee.Image.cat ([asc201809, asc201809dec, s2201809]).clip(pu)
+var tot201812 = ee.Image.cat ([asc201812, asc201812dec, s2201812]).clip(pu)
+var tot201909 = ee.Image.cat ([asc201909, asc201909dec, s2201909]).clip(pu)
+var tot201912 = ee.Image.cat ([asc202001, asc202001dec, s2201912]).clip(pu)
+var tot202009 = ee.Image.cat ([asc202009, asc202009dec, s2202009]).clip(pu)
+var tot202012 = ee.Image.cat ([asc202012, asc202012dec, s2202012]).clip(pu)
 
-//asce e desc
-//var tot201712 = ee.Image.cat ([s201712, dec201712, s2201712]).clip(fano)
 
 //AGGIUNGO LE IMMAGINI NELLA MAPPA
 Map.addLayer(tot201410,{min:0.05, max:0.25, bands: ['B4','B3','B2']}, '201410',0)
@@ -132,37 +131,49 @@ tot202012])
 //------------------------------------------------------------------------------------------
 
 //CLASSIFICAZIONE PIU' DETTAGLIATA CON LE CLASSI DI CORINE LAND COVER
-var bands = ['VV','VH','Entropy','Alpha']
-var newfc201712 = newfc201712
-var newfc201812 = newfc201812
-var newfc201912 = boscato2019.merge(suolo2019).merge(arbust2019)
-var newfc201512 = boscato2015.merge(suolo2015).merge(acqua2015).merge(coltivato2015).merge(arbusti2015)
-Export.table.toAsset({
-  collection: newfc201512,
-  description: 'newfcFANO201512',
-  assetId: 'newfcFANO201512'})
-  
-  
-  
+var bandsRAD = ['VV','VH','Entropy','Alpha']
+//var newfc = boscato.merge(suolo).merge(acqua).merge(coltivato).merge(URBAN) //merge(arbusti)
 var bandsOPT = ['B2','B3','B4','B8','B11','B12','NDVI','NDBI']
-//var bands = ['VV','VH','Entropy','Alpha','B2','B3','B4','B8','NDVI','B11','B12','NDBI']
+var bands = ['VV','VH','Entropy','Alpha','B2','B3','B8','B4','B5','B6','span','ratio','NDVI','B11','B12','NDBI']
+var newfc2016 = boscato2016.merge(suolo2016).merge(acqua2016).merge(coltivato2016).merge(urbano2016).merge(arbusti2016)
+var newfc2020 = boscato2020.merge(suolo2020).merge(acqua2020).merge(coltivato2020).merge(urbano2020).merge(arbusti2020)
+Export.table.toAsset({
+  collection: newfc2020,
+  assetId: 'newfcFANO2020',
+  description: 'newfcFANO2020'})
+  
 //TRAINING
+var train201512 = tot201512.select(bands).sampleRegions ({
+  collection: newfc2015,
+  properties: ['landcover'],
+  scale: 200,
+  tileScale: 16})
+var train201612 = tot201612.select(bands).sampleRegions ({
+  collection: newfc2016,
+  properties: ['landcover'],
+  scale: 200,
+  tileScale: 16})
 var train201712 = tot201712.select(bands).sampleRegions ({
-  collection: newfc201712,
+  collection: newfc2017,
   properties: ['landcover'],
   scale: 200,
   tileScale: 16})
 var train201812 = tot201812.select(bands).sampleRegions ({
-  collection: newfc201812,
+  collection: newfc2018,
   properties: ['landcover'],
   scale: 200,
   tileScale: 16})
 var train201912 = tot201912.select(bands).sampleRegions ({
-  collection: newfc201912,
+  collection: newfc2019,
   properties: ['landcover'],
   scale: 200,
   tileScale: 16})
-var train = train201712.merge(train201812).merge(train201912)
+var train202012 = tot202012.select(bands).sampleRegions ({
+  collection: newfc2020,
+  properties: ['landcover'],
+  scale: 200,
+  tileScale: 16})
+var train = train201512.merge(train201712).merge(train201812).merge(train201912)
 var trainingData = train.randomColumn()
 var training1 =trainingData.filter (ee.Filter.lessThan('random',0.9))
 var valData = trainingData.filter (ee.Filter.greaterThanOrEquals('random',0.9))
@@ -173,22 +184,41 @@ var classifier = function (img){
   minLeafPopulation: 1,
   variablesPerSplit: 3,
   bagFraction: 0.3,
-  seed: 1}).train ({
+  seed: 0}).train ({
   features: training1,
   classProperty: 'landcover',
   inputProperties: bands})
   var classified = img.select(bands).classify(classifier)
   return classified}
 
-//VALIDATION
-var classifier = function (img){
+//ACCURACY OF CLASSIFIER 
+// Classify the input imagery.
+var accuracyClass = function (img) {
   var classifier = ee.Classifier.smileRandomForest({
   numberOfTrees: 500,
   minLeafPopulation: 1,
   variablesPerSplit: 3,
   bagFraction: 0.3,
-  seed: 1}).train ({
+  seed: 0}).train ({
   features: training1,
+  classProperty: 'landcover',
+  inputProperties: bands})
+  var classified = img.select(bands).classify(classifier)
+  // Get a confusion matrix representing resubstitution accuracy.
+  var trainAccuracy = classifier.confusionMatrix();
+  var kappa = trainAccuracy.kappa()
+  return img.set('kappa', kappa)};
+
+
+//VALIDATION
+var validation = function (img){
+  var classifier = ee.Classifier.smileRandomForest({
+  numberOfTrees: 500,
+  minLeafPopulation: 1,
+  variablesPerSplit: 3,
+  bagFraction: 0.3,
+  seed: 0}).train ({
+  features: valData,
   classProperty: 'landcover',
   inputProperties: bands})
   var classified = img.select(bands).classify(classifier)
@@ -198,12 +228,16 @@ var classifier = function (img){
       predicted: 'classification'}))
   var accuracy = confusionMatrix.accuracy()
   var kappa = confusionMatrix.kappa()
-  return img.set('kappa', kappa).set('accuracy',accuracy)}
+  return img.set('kappa', kappa)}
     
 var asc_class = asc.map(classifier)
-var asc_val = asc.map(classifier)
-print(asc_val)
+var asc_val = asc.map(validation)
+var asc_trainingAcc = asc.map(accuracyClass)
+print(asc_val,'kappa sul validation set')
+print(asc_trainingAcc,'kappa sul training set')
 
+
+var params = {min:0,max:5, palette: ['256706','orange','blue','green','white','brown']}
 Map.addLayer(ee.Image(asc_class.toList(15).get(0)),params, '201410',0)
 Map.addLayer(ee.Image(asc_class.toList(15).get(1)),params, '201412',0)
 Map.addLayer(ee.Image(asc_class.toList(15).get(2)),params, '201509',0)
@@ -219,7 +253,7 @@ Map.addLayer(ee.Image(asc_class.toList(15).get(10)),params, '202002',0)
 Map.addLayer(ee.Image(asc_class.toList(15).get(11)),params, '202009',0)
 Map.addLayer(ee.Image(asc_class.toList(15).get(12)),params, '202012',0)
 
-
+Map.addLayer(urbano2007)
 
 /*
 
