@@ -17,7 +17,6 @@ titolo.style().set({
 var year = '2018';
 var month = '08';
 
-
 var annoTitolo = ui.Label('L\'anno su cui effetturare la stima (dal 2015 al 2020)');
 var annoInput = ui.Textbox({
   placeholder: 'Anno dal 2015 al 2020',
@@ -187,13 +186,22 @@ var calcolo = ui.Button({
     
     var rename = function (img) {
       if(band === 'VV') {
-      return img.select(['VV','VV_1']).rename(['VV','VV_moisture'])
+      return img.select(['VV','VV_1']).rename(['VV','moisture'])
     } else if (band == 'VH') {
-      return img.select(['VH','VH_1']).rename(['VH','VH_moisture'])
+      return img.select(['VH','VH_1']).rename(['VH','moisture'])
     }};
     
+     var name = function (img) {
+     var date = ee.String(img.get('system:index'))
+     var dateSplit = date.split('_').get(4)
+     var img_set = img.set('name', dateSplit)
+     return img_set}
+     
+     
     var moisture = moisture.map(rename)
-    
+    var moisture = moisture.map(name)
+    var name = moisture.get('name')
+    print(name)
     print('Collezione di dati Sentinel-1', coll);
     print('Collezione delle immagini con stima dell\'umidità', moisture)
     
@@ -202,9 +210,9 @@ var calcolo = ui.Button({
     // client side loop!
     for(var i = 0; i < size; i++){
     var image = ee.Image(list.get(i));
-   Map.addLayer(image, {}, i.toString())
+   Map.addLayer(image, {bands:'moisture'}, name.toString(),0)
     }
-   
+  
 
 }});
 
@@ -235,6 +243,8 @@ print(orbita);
 print(banda);
 
 print(calcolo);
+
+
 
 
 
