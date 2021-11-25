@@ -1,7 +1,6 @@
-// Disegnare area di interesse 
-
-//var.... con la tua area di interesse
-var marche = marche
+//Disegna un'area di interesse
+//var marche = "la tua area di interesse"
+var marche = table
 Map.centerObject(marche, 9);
 
 
@@ -16,6 +15,7 @@ titolo.style().set({
 // User inputs: year and month
 var year = '2018';
 var month = '08';
+
 
 var annoTitolo = ui.Label('L\'anno su cui effetturare la stima (dal 2015 al 2020)');
 var annoInput = ui.Textbox({
@@ -191,7 +191,7 @@ var calcolo = ui.Button({
       return img.select(['VH','VH_1']).rename(['VH','moisture'])
     }};
     
-     var name = function (img) {
+    var name = function (img) {
      var date = ee.String(img.get('system:index'))
      var dateSplit = date.split('_').get(4)
      var img_set = img.set('name', dateSplit)
@@ -200,8 +200,6 @@ var calcolo = ui.Button({
      
     var moisture = moisture.map(rename)
     var moisture = moisture.map(name)
-    var name = moisture.get('name')
-    print(name)
     print('Collezione di dati Sentinel-1', coll);
     print('Collezione delle immagini con stima dell\'umidità', moisture)
     
@@ -210,7 +208,9 @@ var calcolo = ui.Button({
     // client side loop!
     for(var i = 0; i < size; i++){
     var image = ee.Image(list.get(i));
-   Map.addLayer(image, {bands:'moisture'}, name.toString(),0)
+    var name = image.get('name');
+    print(name)
+    Map.addLayer(image, {bands:'moisture'}, i.toString(), 0)
     }
   
 
@@ -243,8 +243,6 @@ print(orbita);
 print(banda);
 
 print(calcolo);
-
-
 
 
 
