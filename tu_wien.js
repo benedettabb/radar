@@ -1,55 +1,49 @@
-//Disegna un'area di interesse
-//var marche = "la tua area di interesse"
-var marche = table
-Map.centerObject(marche, 9);
-
-// Titolo
-var titolo = ui.Label('Tu Wien Change Detection');
-titolo.style().set({
+var marche = table                                                                    //area d'interesse
+Map.centerObject(marche, 9);                                                          //centro la mappa sull'area d'interesse
+ 
+var titolo = ui.Label('Tu Wien Change Detection');                                    //Pannello: titolo
+titolo.style().set({                                                                  //stile pannello 'Tu Wien Change Detection'
   fontSize: '24px',
   fontWeight: 500,
   padding: '0px'
 });
 
-
-
-var annoTitolo = ui.Label('L\'anno su cui effetturare la stima (dal 2015 al 2020)');
+var annoTitolo = ui.Label('L\'anno su cui effetturare la stima (dal 2015 al 2020)');  //Pannello: anno
 var annoInput = ui.Textbox({
-  placeholder: 'Anno dal 2015 al 2020',
+  placeholder: 'Anno dal 2015 al 2020',                                               //testo
   value: '2015',
-  onChange: function(text) {
+  onChange: function(text) {                                                          //testo da inserire
     var year = text;
     return year;
   }
 });
 
 
-var meseTitolo = ui.Label('Il mese su cui effettuare la stima (da agosto a gennaio)');
+var meseTitolo = ui.Label('Il mese su cui effettuare la stima (da agosto a gennaio)'); //Pannello: mese
 var meseInput = ui.Textbox({
-  placeholder: 'Mese da agosto a gennaio',
+  placeholder: 'Mese da agosto a gennaio',                                             //testo
   value: '08',
-  onChange: function(text) {
+  onChange: function(text) {                                                           //testo da inserire
     var month = text
     return month ;
   }
 });
 
 
-// Which path you want to process?
 var path;
-var pathList = {
+var pathList = {                                                                     
   ASCENDING: 1,
   DESCENDING: 2
 };
 
-var orbita = ui.Select({
+var orbita = ui.Select({                                                               //Pannello: seleziona direzione dell'orbita
   items: Object.keys(pathList),
-  placeholder: 'Seleziona la direzione dell\'orbita',
+  placeholder: 'Seleziona la direzione dell\'orbita',                                  //testo
   onChange: function (key) {
-    path = parseInt(key, 10);
+    path = parseInt(key, 10);                                                          //scelta direzione dell'orbita
   }
 });
-orbita.style().set({
+orbita.style().set({                                                                    //stile pannello "Seleziona la direzione dell'orbita"
   maxWidth: '250px'
 });
 
@@ -59,200 +53,249 @@ var bands = {
   VH: 2
 };
 
-
-var banda = ui.Select({
+var banda = ui.Select({                                                                //Pannello: seleziona la banda
   items: Object.keys(bands),
-  placeholder: 'Seleziona la banda (consigliata VV)',
-  onChange: function (key) {
+  placeholder: 'Seleziona la banda (consigliata VV)',                                  //testo
+  onChange: function (key) {                                                          //scelta banda
     band = parseInt(key, 10);
   }
 });
-banda.style().set({
+banda.style().set({                                                                    //stile pannello 'Seleziona la banda'
   maxWidth: '250px'
 });
 
 
-var calcolo = ui.Button({
-  label: 'Elaborazione',
+var norm;
+var norm_method = {
+  Angle_based: 1,
+  Linear_based:2
+};
+
+var norm_m = ui.Select({                                                                //Pannello: seleziona il metodo di normalizzazione
+  items: Object.keys(norm_method),
+  placeholder: 'Seleziona il metodo di normalizzazione',                                //testo
+  onChange: function (key) {                                                            //scelta banda
+    norm = parseInt(key, 10);
+  }
+});
+norm_m.style().set({                                                                    //stile pannello 'Seleziona la banda'
+  maxWidth: '250px'
+});
+
+var calcolo = ui.Button({                                                               //Pannello: Elaborazione
+  label: 'ELABORAZIONE',
   onClick: function() {
-    var anno = ee.Number.parse(annoInput.getValue());
-    var mese = ee.Number.parse(meseInput.getValue());
-    var start = ee.Date.fromYMD (anno, mese, 01)
-    var end = ee.Date.fromYMD (anno, mese, 29)
-    // Filtering based on metadata properties
-    var coll = ee.ImageCollection('COPERNICUS/S1_GRD_FLOAT') 
-      .filter(ee.Filter.eq('instrumentMode', 'IW'))
-      .filter(ee.Filter.or(
-        (ee.Filter.eq('relativeOrbitNumber_start',44)),   //ascending
-        (ee.Filter.eq('relativeOrbitNumber_start',117)),  //ascending
-        (ee.Filter.eq('relativeOrbitNumber_start',95)),   //descending
-        (ee.Filter.eq('relativeOrbitNumber_start',22))    //descending
+    var anno = ee.Number.parse(annoInput.getValue());                                 //valore inserito in anno 
+    var mese = ee.Number.parse(meseInput.getValue());                                 //valore inserito in anno 
+    var start = ee.Date.fromYMD (anno, mese, 01)                                      //trasformo in data di inizio (dal 1 del mese)
+    var end = ee.Date.fromYMD (anno, mese, 30)                                        //trasformo in data di fine (fino al 30 del mese)
+    
+    var coll = ee.ImageCollection('COPERNICUS/S1_GRD_FLOAT')                          //Filtro la collezione in base ai metadati
+      .filter(ee.Filter.eq('instrumentMode', 'IW'))                                   //- modalità IW
+      .filter(ee.Filter.or(                                                           //- numero relativo dell'orbita:
+        (ee.Filter.eq('relativeOrbitNumber_start',44)),                               //44 ascending
+        (ee.Filter.eq('relativeOrbitNumber_start',117)),                              //117 ascending
+        (ee.Filter.eq('relativeOrbitNumber_start',95)),                               //95 descending
+        (ee.Filter.eq('relativeOrbitNumber_start',22))                                //22 descending
         ))
-      .filterBounds(marche) 
-      .filterDate(start, end)
+      .filterBounds(marche)                                                           //- regione d'interesse
+      .filterDate(start, end)                                                         //- mese definito dall'utente
     ;
     
-    var path = orbita.getValue();
+    var path = orbita.getValue();                                                     //Direzione dell'orbita inserita
     var pathString;
-    if(path === 'ASCENDING') {
-      coll = coll.filter(ee.Filter.eq('orbitProperties_pass', 'ASCENDING'));
-    } else if (path === 'DESCENDING') {
-      coll =  coll.filter(ee.Filter.eq('orbitProperties_pass', 'DESCENDING'));
+    if(path === 'ASCENDING') {                                                        //se è ASCENDING 
+      coll = coll.filter(ee.Filter.eq('orbitProperties_pass', 'ASCENDING'));          //filtra la collezione per le orbite ascendenti
+    } else if (path === 'DESCENDING') {                                               //se è DESCENDING 
+      coll =  coll.filter(ee.Filter.eq('orbitProperties_pass', 'DESCENDING'));        //filtra la collezione per le orbite discendenti
     } else {
       pathString = null;
-      throw new Error('Scegli la direzione dell\'orbita per procedere');
+      throw new Error('Scegli la direzione dell\'orbita per procedere');              //Altrimenti, se la direzione dell'orbita non è né ascendente né discendente, errore: "Scegli la direzione dellìorbita per procedere"
     }
     
     
-    //Funzione per normalizzare 
-    var corr = function (img) {
-      var elevation = ee.Image('USGS/SRTMGL1_003').select('elevation')
-      var ninetyRad = ee.Image.constant(90).multiply(Math.PI/180);
-      //RADAR GEOMETRY
-      var heading = (ee.Terrain.aspect(img.select('angle')).reduceRegion(ee.Reducer.mean(), marche, 1000).get('aspect'));
-      var theta_iRad = img.select('angle').multiply(Math.PI/180)
-      var phi_iRad = ee.Image.constant(heading).multiply(Math.PI/180);
-      //TERRAIN GEOMETRY
-      var alpha_sRad = ee.Terrain.slope(elevation).select('slope').multiply(Math.PI/180);
-      var phi_sRad = ee.Terrain.aspect(elevation).select('aspect').multiply(Math.PI/180);
+    var corrAngle = function (img) {                                                   //Prima funzione per normalizzare ad un'angolo d'incidenza di riferimento 
+        var elevation = ee.Image('USGS/SRTMGL1_003').select('elevation')               //Metodo basato sulla relazione angolare tra la geometria del sensore e quella del terreno
+        var ninetyRad = ee.Image.constant(90).multiply(Math.PI/180);
+        var heading = (ee.Terrain.aspect(img.select('angle'))                           //RADAR GEOMETRY: theta_i e phi_i
+        .reduceRegion(ee.Reducer.mean(), marche, 1000).get('aspect'));  
+        var theta_iRad = img.select('angle').multiply(Math.PI/180)
+        var phi_iRad = ee.Image.constant(heading).multiply(Math.PI/180);
+        var alpha_sRad = ee.Terrain.slope(elevation)                                    //TERRAIN GEOMETRY: alpha_s e phi_s
+        .select('slope').multiply(Math.PI/180); 
+        var phi_sRad = ee.Terrain.aspect(elevation)
+        .select('aspect').multiply(Math.PI/180);
+          
+        var phi_rRad = phi_iRad.subtract(phi_sRad);                                     //MODEL GEOMETRY: phi_r, alpha_r, alpha_az
+        var alpha_rRad = (alpha_sRad.tan().multiply(phi_rRad.cos())).atan();            // alpha_r: pendenza del pendio nella direzione del range
+        var alpha_azRad = (alpha_sRad.tan().multiply(phi_rRad.sin())).atan();           // alpha_az: pendenza del pendio nella direzione azimutale
+          
+        var vv = img.select('VV')
+        var vh = img.select('VH')
+        var gamma0vv = vv.divide(theta_iRad.cos());                                     //Da sigma 0 a gamma 0 per la banda VV
+        var gamma0vh = vh.divide(theta_iRad.cos());                                     //Da sigma 0 a gamma 0 per la banda VH
         
-      //MODEL GEOMETRY
-      //reduce to 3 angle
-      var phi_rRad = phi_iRad.subtract(phi_sRad);
-      // slope steepness in range
-      var alpha_rRad = (alpha_sRad.tan().multiply(phi_rRad.cos())).atan();
-      // slope steepness in azimuth
-      var alpha_azRad = (alpha_sRad.tan().multiply(phi_rRad.sin())).atan();
+        var nominator = (ninetyRad.subtract(theta_iRad)).cos();                         //Modello: nominatore
+        var denominator = alpha_azRad.cos().multiply((ninetyRad.subtract(theta_iRad)    //Modello: denominatore
+        .add(alpha_rRad)).cos());
+        var result = nominator.divide(denominator);                                     //nominatore/denominatore
         
-      //FROM SIGMA 0 TO gamma 0
-      var vv = img.select('VV')
-      var vh = img.select('VH')
-      var gamma0vv = vv.divide(theta_iRad.cos());
-      var gamma0vh = vh.divide(theta_iRad.cos());
-      
-      //MODEL
-      var nominator = (ninetyRad.subtract(theta_iRad)).cos();
-      var denominator = alpha_azRad.cos().multiply((ninetyRad.subtract(theta_iRad).add(alpha_rRad)).cos());
-      var result = nominator.divide(denominator);
-      
-      //GAMMA FLAT
-      var gammafvv = gamma0vv.divide(result)
-      var gammafvh = gamma0vh.divide(result)
-      
-      
-      //MASK LAYOVER AND SHADOW
-      var layover = alpha_rRad.lt(theta_iRad).rename('layover');
-      var shadow = alpha_rRad.gt(ee.Image.constant(-1).multiply(ninetyRad.subtract(theta_iRad))).rename('shadow');
-      var mask = layover.and(shadow);
-      
-      var norm =  ee.Image.cat(gammafvv, gammafvh).addBands(img.select('angle'))
-      return norm.updateMask(mask)
+        var gammafvv = gamma0vv.divide(result)                                          //Applicazione del modello a gamma VV
+        var gammafvh = gamma0vh.divide(result)                                          //Applicazione del modello a gamma VH
+        
+        var layover = alpha_rRad.lt(theta_iRad).rename('layover');                      //Layover
+        var shadow = alpha_rRad.gt(ee.Image.constant(-1)                                //Shadow
+        .multiply(ninetyRad.subtract(theta_iRad))).rename('shadow');
+        var mask = layover.and(shadow);                                                 //Maschera per layover e shadow
+        
+        var norm =  ee.Image.cat(gammafvv, gammafvh).addBands(img.select('angle'))      //Immagine normalizzata
+        return norm.updateMask(mask)                                                    //Applicazione della maschera all'immagine normalizzata
+      };
+    
+    var corrLinear = function (img) {                                                   //Prima funzione per normalizzare ad un'angolo d'incidenza di riferimento. Metodo basato sulla realzione lineare tra sigma_0 e theta_i
+        var startYear = ee.Date.fromYMD (anno, 01, 01);                                 //Primo giorno dell'anno scelto
+        var endYear = ee.Date.fromYMD (anno, 12, 31);                                   //Ultimo giorno dell'anno scelto
+        var s1 = ee.ImageCollection('COPERNICUS/S1_GRD_FLOAT')                          //Filtro la collezione in base ai metadati
+          .filter(ee.Filter.eq('instrumentMode', 'IW'))                                 //- modalità IW
+          .filter(ee.Filter.or(                                                         //- numero relativo dell'orbita:
+            (ee.Filter.eq('relativeOrbitNumber_start',44)),                             //44 ascending
+            (ee.Filter.eq('relativeOrbitNumber_start',117)),                            //117 ascending
+            (ee.Filter.eq('relativeOrbitNumber_start',95)),                             //95 descending
+            (ee.Filter.eq('relativeOrbitNumber_start',22))                              //22 descending
+            ))
+          .filterBounds(marche)                                                         //- regione d'interesse
+          .filterDate(startYear, endYear)                                               //- anno definito dall'utente
+        ;
+        var bandString;
+        var band= banda.getValue();
+        if(band === 'VV') {                                                             //Se la banda scelta è VV:
+         var linearfit = s1.select(['angle', 'VV'])                                     //Regressione lineare tra valori di sigma_0 (VV) e theta_i per l'anno di riferimento
+         .reduce(ee.Reducer.linearFit());      
+         var beta = linearfit.select('scale');                                          //seleziono beta: pendenza della retta di regrssione lineare
+         var norm_calc = function(img){                                                 //Modello per la normalizzazione di VV
+          return img.addBands(img.select('VV')                                  
+          .subtract(beta.multiply(img.select('angle').subtract(40))))
+          };
+         var normalized = norm_calc(img);                                               //Applico il modello all'immagine
+        } else if (band === 'VH') {                                                     //Se la banda scelta è VV:
+          var linearfit = s1.select(['angle', 'VH'])                                    //Regressione lineare tra valori di sigma_0 (VH) e theta_i per l'anno di riferimento
+         .reduce(ee.Reducer.linearFit());                                     
+         var beta = linearfit.select('scale');                                          //seleziono beta: pendenza della retta di regrssione lineare
+         var norm_calc = function(img){                                                 //Modello per la normalizzazione di VV
+          return img.addBands(img.select('VH')
+          .subtract(beta.multiply(img.select('angle').subtract(40))))
+          };
+         var normalized = norm_calc(img);                                                //Applico il modello all'immagine
+        } else {                                                                         //Altrimenti, se la banda non è né VV né VH, errore: "Scegli la polarizzazione per procedere"
+          bandString = null;                                                                
+          throw new Error('Scegli la polarizzazione per procedere');
+        }
+       return normalized                                                                 //La funzione corrLinear ritorna l'immagine normalizzata
     };
+        
+
     
-    var collNorm = coll.map(corr)
-    var collNorm = collNorm.map(function(img){return img.clip(marche)})
-    var minMax = collNorm.reduce(ee.Reducer.minMax())
-    
+    var normString;
+    var norm = norm_m.getValue();
+    if(norm === 'Angle_based') {                                                      //Se il metodo di nomalizzazione scelto è "Angle_based"
+    var collNorm = coll.map(corrAngle)                                                //Applico la corrispondente funzione di normalizzazione a tutte le immagini della collezione
+    } else if (norm == 'Linear_based') {                                              //Se il metodo di nomalizzazione scelto è "Linear_based"
+    var collNorm = coll.map(corrLinear)                                               //Applico la corrispondente funzione di normalizzazione a tutte le immagini della collezione
+    } else {
+    normString = null;                                                                //Altrimenti errore: "Scegli un metodo di normalizzazione"
+    throw new Error('Scegli il metodo di normalizzazione');
+    }  
+      
+    var collNorm = collNorm.map(function(img){return img.clip(marche)})                //Ritaglio le immagini 
+    var minMax = collNorm.reduce(ee.Reducer.minMax())                                  //Creo una nuova immagine contentente due bande: 
+                                                                                       //-valori minimi per ciascun pixel -valori massimi per ciascun pixel
     var bandString;
     var band= banda.getValue();
-    if(band === 'VV') {
-      var collNorm = collNorm.select('VV');
-      var driest = minMax.select('VV_min');
-      var wettest = minMax.select ('VV_max');
-    } else if (band === 'VH') {
-      var collNorm = collNorm.select('VH');
-      var driest = minMax.select('VV_min');
-      var wettest = minMax.select ('VV_max')
+    if(band === 'VV') {                                                                //Se la banda selezionata è VV:
+      var collNorm = collNorm.select('VV');                                            //-seleziona dalla collezione sono la banda VV
+      var driest = minMax.select('VV_min');                                            //-seleziona VVmin: condizioni secche
+      var wettest = minMax.select ('VV_max');                                          //-seleziona VVmax: condizioni umide
+    } else if (band === 'VH') {                                                        //Se la banda selezionata è VH:
+      var collNorm = collNorm.select('VH');                                            //-seleziona dalla collezione sono la banda VVH
+      var driest = minMax.select('VV_min');                                            //-seleziona VHmin: condizioni secche
+      var wettest = minMax.select ('VV_max')                                           //-seleziona VHmax: condizioni umide
     } else {
-      bandString = null;
+      bandString = null;                                                               //Altrimenti errore 
       throw new Error('Scegli la polarizzazione');
     }
     
-    var tu_wien = function (img){
-    var sensitivity = wettest.subtract(driest); 
-    var SMmax=0.32; 
-    var SMmin=0.05;
-    var calculateSSM = function (image){ 
+    var tu_wien = function (img){                                                      //Funzione con Tu Wien Change Detection method
+    var sensitivity = wettest.subtract(driest);                                        //sensibilità: valori massimi-valori minimi
+    var SMmax=0.32;                                                                    //condizioni di saturazione 
+    var SMmin=0.05;                                                                    //Condizioni di avvizzimento
+    var calculateSSM = function (image){                                               //Funzione per il calcolo umidità volumetrica
       return image.addBands(((image.subtract(driest)).divide(sensitivity))
       .multiply(SMmax-SMmin).add(SMmin)); 
       }; 
-    var ssm = calculateSSM(img) 
+    var ssm = calculateSSM(img)                                                        //Applico la funzione all'immagine
     return ssm}
     
     
-    var moisture = collNorm.map(tu_wien)
+    var moisture = collNorm.map(tu_wien)                                               //Applico la funzione stima dell'umidità ad ogni immagine della collezione
     
-    var rename = function (img) {
-      if(band === 'VV') {
-      return img.select(['VV','VV_1']).rename(['VV','moisture'])
-    } else if (band == 'VH') {
-      return img.select(['VH','VH_1']).rename(['VH','moisture'])
-    }};
+    var rename = function (img) {                                                      //funzione per rinominare le bande
+      if(band === 'VV') {                                                              //Se la banda scelta è VV 
+      return img.select(['VV','VV_1']).rename(['VV','moisture'])                       //nuovi nomi: VV e moisture
+    } else if (band == 'VH') {                                                         //Se la banda scelta è VH
+      return img.select(['VH','VH_1']).rename(['VH','moisture'])                       //nuovi nomi: VH e moisture
+    }}; 
     
      
-    var moisture = moisture.map(rename)
+    var moisture = moisture.map(rename)                                                 //applico la funzione per rinominare a tutte le immagini della collezione
     print('Collezione di dati Sentinel-1', coll);
     
-    var size = moisture.size().getInfo()
-    var list = moisture.toList(size);
-    // client side loop!
-    for(var i = 0; i < size; i++){
+    var size = moisture.size().getInfo()                                                //estraggo il numero di immagini nella collezione e trasferisco su lato client (necessario per applicare poi al ciclo for)
+    var list = moisture.toList(size);                                                   //trasformo la collezione di immaigni in una lista della lunghezza individuata prima
+    
+    for(var i = 0; i < size; i++){                                                      // client side loop per visualizzare le immagini nella mappa
     var image = ee.Image(list.get(i));
     var name = image.get('name');
-    Map.addLayer(image, {bands:'moisture'}, i.toString(), 1)
+    Map.addLayer(image, {bands:'moisture'}, i.toString(), 1)                            //cambiare nome delle immagini!
     }
     
-    var roi_moisture = moisture.map(function(img){return img.clip(marche)});
-    var mean = function (img){
+    var roi_moisture = moisture.map(function(img){return img.clip(roi)});               //Ritaglio le immagini all'area intorno alla stazione ASSAM Agugliano
+    var mean = function (img){                                                          //Funzione per calcolare i valori di umidità medi dell'area per ogni immagine nella collezione
        var date = ee.String(img.get('system:index'))
-      var dateSplit = date.split('_').get(4)
-      var img_set = img.set('name', dateSplit)
+      var dateSplit = date.split('_').get(4)                                            //nomino le immagini utilizzando la data in system:index
+      var img_set = img.set('name', dateSplit)                                          //imposto il nome come proprietà dell'immagine
       var mean = img_set.select('moisture').reduceRegion({
-        reducer: ee.Reducer.mean(), 
+        reducer: ee.Reducer.mean(),                                                     //applico il reducer per calcolare la media
         geometry: roi,
         scale: 10})
-        var img_out = img_set.set('mean:roi',mean)
+        var img_out = img_set.set('mean:moisture:roi',mean)                             //imposto il valore medio come proprietà dell'immagine
         return img_out
       };
-    var moisture_mean = roi_moisture.map(mean)
-    var add = ['mean:roi', 'name'];
+    var moisture_mean = roi_moisture.map(mean)                                          //applico la funzione a tutte le immagini della collezione
+    var add = ['mean:moisture:roi', 'name'];                                            //creo una lista di nome e valore medio
   var augmented = moisture_mean.map(function (image) {
-  return image.set('dict', image.toDictionary(add));
+  return image.set('dict', image.toDictionary(add));                                    //e le imposto sotto forma di dizionario
 });
-    var final = augmented.aggregate_array('dict');
-    print(final, 'DATE E VALORI DI UMIDITA\' MEDI PER L\'AREA DI INTERESSE' );
-}});
-
-calcolo.style().set({
-  fontSize: '24px',
-  fontWeight: 700,
-  color: '#000000',
-  padding: '10px',
-  margin: '30px 10px 10px 10px',
-  minHeight: '60px',
-  maxWidth: '200px'
-});
-
-
-var grafico = ui.Button({
-  label: 'Crea grafico',
-  onClick: function() {
-    //dalle date inserite dall'utente ai due numeri
-      var anno = ee.Number.parse(annoInput.getValue());
-      var mese = ee.Number.parse(meseInput.getValue());
-      var start = ee.Date.fromYMD (anno, mese, 01)
-      var end = ee.Date.fromYMD (anno, mese, 30)
-      var start = start.format (null, 'GMT')
-      var start = start.replace('-', "").replace('-', "")
-      var start = start.slice(0,8)
-      var start_numb = ee.Number.parse(start).getInfo() //sconsigliato ma funziona
-      var end = end.format (null, 'GMT')
-      var end = end.replace('-', "").replace('-', "")
-      var end = end.slice(0,8)
-      var end_numb = ee.Number.parse(end).getInfo() //sconsigliato ma funziona
-      //dati ASSAM
-      var prec = [	
-          {data:20150801, prec_mm:11.2},	
+    var final = augmented.aggregate_array('dict');                                      //estraggo le proprietà come un array
+    print(final, 'DATE E VALORI DI UMIDITA\' MEDI PER L\'AREA DI INTERESSE' );          //stampo il riepilogo di date e valori medi di umidità
+    var moisture_list = []
+    for (var i = 0; i < size; i++){
+      var img = ee.Image(moisture_mean.get(i));
+      var only_moisture = img.get('mean:moisture:roi')
+      moisture_list.push(only_moisture)}
+    print(moisture_list)
+    
+                                      
+      var start = start.format (null, 'GMT')                                           //trasformo la data di inizio in stringa
+      var start = start.replace('-', "").replace('-', "")                              //tolgo -
+      var start = start.slice(0,8)                                                     //prendo solo l'anno il mese e il giorno
+      var start_numb = ee.Number.parse(start).getInfo()                                //trasformo in numero e trasferisco sul client
+      var end = end.format (null, 'GMT')                                               //trasformo la data di fine in stringa
+      var end = end.replace('-', "").replace('-', "")                                  //tolgo -
+      var end = end.slice(0,8)                                                         //prendo solo l'anno il mese e il giorno
+      var end_numb = ee.Number.parse(end).getInfo()                                    //trasformo in numero e trasferisco sul client
+      
+      var prec = [	                                                                   //dati ASSAM di precipitazione per la stazione di Agugliano, 
+          {data:20150801, prec_mm:11.2},	                                             //dal 01/08 al 31/01, dal 2015/2016 al 2020/2021
           {data:20150802, prec_mm:0},	
           {data:20150803, prec_mm:0},	
           {data:20150804, prec_mm:0},	
@@ -1366,67 +1409,63 @@ var grafico = ui.Button({
           {data:20210130, prec_mm:0.4},
           {data:20210131, prec_mm:14.2}]
           
-      //filtro i dati in base al range di date definito dall'utente
-      var range = [];
+      
+      var range = [];                                                                      //creo una lista vuota per i dati filtrati                   
         for (var i = 0; i < prec.length; i++) {
-         if (prec[i].data >= start_numb && prec[i].data <= end_numb) {
-          range.push(prec[i]);
+         if (prec[i].data >= start_numb && prec[i].data <= end_numb) {                     //filtro i dati in base al range di date definito dall'utente  
+          range.push(prec[i]);                                                             //aggiungo i dati filtrati alla lista vuota
               }
           }
-      print('Dati e precipitazioni in mm/d per il mese scelto',range)
+      print('Dati e precipitazioni in mm/d per il mese scelto',range)                      //stampo le date e i rispettivi valori di precipitazione per il mese scelto
 
-          
-      //lista di date
-      function getDates(main) {
-          var dates = [];
-          for (var i = 0; i < main.length; i++ ) {
-              dates.push(main[i].data);
+        
+      function getDates(main) {                                                            //funzione per creare una lista di date 
+          var dates = [];                                                                  //lista vuota
+          for (var i = 0; i < main.length; i++ ) {        
+              dates.push(main[i].data);                                                    //inserisco le date nella lista
           }
           return dates;
       };
-      var dates = getDates(range);
+      var dates = getDates(range);                                                        //applico la funzione "getDates" al range d'interesse
       
-      //lista di precipitazioni
-      function getPrec(main) {
-          var dates = [];
+      function getPrec(main) {                                                            //funzione per creare una lista di precipitazioni
+          var prec = [];                                                                  //lista vuota
           for (var i = 0; i < main.length; i++ ) {
-              dates.push(main[i].prec_mm);
+              prec.push(main[i].prec_mm);                                                 //inserisco i valori di precipitazione nella lista   
           }
-          return dates;
+          return prec;
       };
-      var prec = getPrec(range);
+      var prec = getPrec(range);                                                          //applico la funzione "getPrec" al range d'interesse
       
       
-      var zipped = dates.map(function(e, i) {
-        return [e, prec[i]];
+      var zipped = dates.map(function(e, i) {                                             //combino le due liste in una lista di liste: 
+        return [e, prec[i]];                                                              // zipped = [[data, precipitazione],[data, precipitazione],...]
       });
       
-      var header = ['DATE','PREC']
-      var zipped = [header].concat(zipped) 
+      var header = ['DATE','PREC']                                                        //creo l'header
+      var zipped = [header].concat(zipped)                                                //aggiungo l'header alla lista
       
-      var chart = ui.Chart(zipped).setChartType('ColumnChart').setOptions({
-        title: 'State Population (US census, 2010)',
+      var chart = ui.Chart(zipped).setChartType('ColumnChart').setOptions({               //visualizzo in un grafico a barre
+        title: 'Precipizioni e umidità',
         legend: {position: 'none'},
-        hAxis: {title: 'State', titleTextStyle: {italic: false, bold: true}},
-        vAxis: {title: 'Population', titleTextStyle: {italic: false, bold: true}},
+        hAxis: {title: 'Data', titleTextStyle: {italic: false, bold: true}},
+        vAxis: {title: 'Precipitazioni (mm/d)', titleTextStyle: {italic: false, bold: true}},
         colors: ['1d6b99']
       });
-      print(chart);
-      
-      
-      
+      print(chart);               
     
 }});
-grafico.style().set({
+
+
+calcolo.style().set({                                                                   //Stile pannello: Elaborazione
   fontSize: '24px',
   fontWeight: 700,
   color: '#000000',
-  padding: '10px',
+  padding: '40px',
   margin: '30px 10px 10px 10px',
   minHeight: '60px',
   maxWidth: '200px'
 });
-
 
 
 print(titolo);
@@ -1439,9 +1478,9 @@ print(meseInput);
 
 print(orbita);
 print(banda);
+print(norm_m);
 
 print(calcolo);
-print(grafico);
 Map.addLayer(assam)
 
 
