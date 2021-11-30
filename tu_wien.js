@@ -1,3 +1,11 @@
+/*Da sistemare:
+  -controllare se vanno bene tutti i mesi con entrambe le orbite
+  -nomi dei layers devono essere le date
+  -grafico: problema di riuscire ad inserire le info di umidità - sistemare la lista di umidità
+*/
+
+
+
 var marche = table                                                                    //area d'interesse
 Map.centerObject(marche, 9);                                                          //centro la mappa sull'area d'interesse
  
@@ -11,7 +19,7 @@ titolo.style().set({                                                            
 var annoTitolo = ui.Label('L\'anno su cui effetturare la stima (dal 2015 al 2020)');  //Pannello: anno
 var annoInput = ui.Textbox({
   placeholder: 'Anno dal 2015 al 2020',                                               //testo
-  value: '2015',
+  value: '2020',
   onChange: function(text) {                                                          //testo da inserire
     var year = text;
     return year;
@@ -22,7 +30,7 @@ var annoInput = ui.Textbox({
 var meseTitolo = ui.Label('Il mese su cui effettuare la stima (da agosto a gennaio)'); //Pannello: mese
 var meseInput = ui.Textbox({
   placeholder: 'Mese da agosto a gennaio',                                             //testo
-  value: '08',
+  value: '12',
   onChange: function(text) {                                                           //testo da inserire
     var month = text
     return month ;
@@ -200,13 +208,13 @@ var calcolo = ui.Button({                                                       
     if(norm === 'Angle_based') {                                                      //Se il metodo di nomalizzazione scelto è "Angle_based"
     var collNorm = coll.map(corrAngle)                                                //Applico la corrispondente funzione di normalizzazione a tutte le immagini della collezione
     } else if (norm == 'Linear_based') {                                              //Se il metodo di nomalizzazione scelto è "Linear_based"
-    var collNorm = coll.map(corrLinear)                                               //Applico la corrispondente funzione di normalizzazione a tutte le immagini della collezione
+    collNorm = coll.map(corrLinear)                                               //Applico la corrispondente funzione di normalizzazione a tutte le immagini della collezione
     } else {
     normString = null;                                                                //Altrimenti errore: "Scegli un metodo di normalizzazione"
     throw new Error('Scegli il metodo di normalizzazione');
     }  
       
-    var collNorm = collNorm.map(function(img){return img.clip(marche)})                //Ritaglio le immagini 
+    collNorm = collNorm.map(function(img){return img.clip(marche)})                //Ritaglio le immagini 
     var minMax = collNorm.reduce(ee.Reducer.minMax())                                  //Creo una nuova immagine contentente due bande: 
                                                                                        //-valori minimi per ciascun pixel -valori massimi per ciascun pixel
     var bandString;
@@ -246,7 +254,7 @@ var calcolo = ui.Button({                                                       
     }}; 
     
      
-    var moisture = moisture.map(rename)                                                 //applico la funzione per rinominare a tutte le immagini della collezione
+    moisture = moisture.map(rename)                                                 //applico la funzione per rinominare a tutte le immagini della collezione
     print('Collezione di dati Sentinel-1', coll);
     
     var size = moisture.size().getInfo()                                                //estraggo il numero di immagini nella collezione e trasferisco su lato client (necessario per applicare poi al ciclo for)
@@ -279,13 +287,13 @@ var calcolo = ui.Button({                                                       
     var moisture_list = augmented.aggregate_array('dict');                              //estraggo le proprietà come un array
     
                                       
-      var start = start.format (null, 'GMT')                                           //trasformo la data di inizio in stringa
-      var start = start.replace('-', "").replace('-', "")                              //tolgo -
-      var start = start.slice(0,8)                                                     //prendo solo l'anno il mese e il giorno
+      start = start.format (null, 'GMT')                                           //trasformo la data di inizio in stringa
+      start = start.replace('-', "").replace('-', "")                              //tolgo -
+      start = start.slice(0,8)                                                     //prendo solo l'anno il mese e il giorno
       var start_numb = ee.Number.parse(start).getInfo()                                //trasformo in numero e trasferisco sul client
-      var end = end.format (null, 'GMT')                                               //trasformo la data di fine in stringa
-      var end = end.replace('-', "").replace('-', "")                                  //tolgo -
-      var end = end.slice(0,8)                                                         //prendo solo l'anno il mese e il giorno
+      end = end.format (null, 'GMT')                                               //trasformo la data di fine in stringa
+      end = end.replace('-', "").replace('-', "")                                  //tolgo -
+      end = end.slice(0,8)                                                         //prendo solo l'anno il mese e il giorno
       var end_numb = ee.Number.parse(end).getInfo()                                    //trasformo in numero e trasferisco sul client
       
       var prec = [	                                                                   //dati ASSAM di precipitazione per la stazione di Agugliano, 
@@ -1406,38 +1414,81 @@ var calcolo = ui.Button({                                                       
       
       var range = [];                                                                      //creo una lista vuota per i dati filtrati                   
       for (var i = 0; i < prec.length; i++) {
-        if (prec[i].data >= start_numb && prec[i].data <= end_numb) {                     //filtro i dati in base al range di date definito dall'utente  
-        range.push(prec[i]);                                                             //aggiungo i dati filtrati alla lista vuota
+        if (prec[i].data >= start_numb && prec[i].data <= end_numb) {                      //filtro i dati in base al range di date definito dall'utente  
+        range.push(prec[i]);                                                               //aggiungo i dati filtrati alla lista vuota
               }
         }
       print('Dati e precipitazioni in mm/d per il mese scelto',range)                      //stampo le date e i rispettivi valori di precipitazione per il mese scelto
      
-      var hum = moisture_list.getInfo()
+      var hum = moisture_list.getInfo()                                 
       for (var i = 0; i < moisture_list.length; i++) {
-      parseInt(moisture_list[i].name)
+      parseInt(moisture_list[i].name)                                                      //trasformo le stringhe di date in numeri integer per farli combaciare con quelli delle precipitazioni
       }
       
-      print('Dati e valori di umidità [%] per il mese scelto', hum)
-           
-      for (var i = 0; i < range.length; i++){
-      range[i].moisture = null;
-      for (var j = 0; j < hum.length; j++){
-       if (hum[j].name == range[i].data){
-         range[i].moisture = hum[j].moisture;
+      function cleanArray(hum) {                                                           //elimino i dati con valori nulli di umidità
+        for (var i = 0; i < hum.length; i++) {
+          if (hum[i].moisture.moisture == null) {
+            hum.splice(i, 1);
+            i--;
+            }
+        }
+        return hum;
+      }
+      
+      hum = cleanArray(hum);
+      print('Dati e valori di umidità [%] per il mese scelto', hum)                         //stampo il riepilogo dei dati di umidità medi
+
+      for (var i = 0; i < range.length; i++){                                               //loop for
+        range[i].moisture = null;                                                           //defalut moisture (in hum) = null
+      for (var j = 0; j < hum.length; j++){                                                 //controllo ciascun elemento 
+       if (hum[j].name == range[i].data){                                                   //se il numero (data) in hum è uguale al numero(data) in range
+         range[i].moisture = hum[j].moisture;                                               // moiusture in range = moisture in hum
           }
         }
       }
 
-      print(range) //da sistemare
+      //print(range)                                                                        //range ora è una lista di "oggetti"
+                                                                                            //come faccio a farci un grafico?
+       function getDates(main) {                                                                     
+          var dates = [];                                                                 	          
+          for (var i = 0; i < main.length; i++ ) {        	              
+          dates.push(main[i].data);                                                    	          
+            }	          
+          return dates;	      
+        };	     
       
-      //fare una lista di liste con [data,prec,moisture]
-      //fare grafico combo
-               
-    
+      var dates = getDates(range)                                                            //lista di date
+
+      function getPrec(main) {                                                                     
+          var prec = [];                                                                 	          
+          for (var i = 0; i < main.length; i++ ) {        	              
+          prec.push(main[i].prec_mm);                                                    	          
+            }	          
+          return prec;	      
+      };
+      var prec = getPrec(range)                                                              //lista di precipitazioni
+      
+      function getM(main) {                                                                     
+          var hum = [];                                                                 	          
+          for (var i = 0; i < main.length; i++ ) {        	              
+          hum.push(main[i].moisture);                                                    	          
+            }	          
+          return hum;	      
+      };
+      var humidity = getM(range)                                                             //lista di umidità (problemi)
+      
+      
+      var zipped = dates.map(function(e, i) {return [e, prec[i]]});                          //unisco le liste
+      //var zipped = dates.map(function(e,i) {return [e, humidity[i]]});
+      var header = ['Data','Prec(mm)']// ,'Moisture']
+      var zipped = [header].concat(zipped)                                                   //aggiungo l'header
+      print(zipped)
+      var chart = ui.Chart(zipped).setChartType('ColumnChart')                               //grafico
+      print(chart)
 }});
 
 
-calcolo.style().set({                                                                   //Stile pannello: Elaborazione
+calcolo.style().set({                                                                       //Stile pannello: Elaborazione
   fontSize: '24px',
   fontWeight: 700,
   color: '#000000',
@@ -1461,6 +1512,6 @@ print(banda);
 print(norm_m);
 
 print(calcolo);
-Map.addLayer(assam)
+Map.addLayer(assam,{},'Stazione meteo ASSAM')
 
 
