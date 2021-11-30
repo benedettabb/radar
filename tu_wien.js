@@ -261,28 +261,22 @@ var calcolo = ui.Button({                                                       
     var roi_moisture = moisture.map(function(img){return img.clip(roi)});               //Ritaglio le immagini all'area intorno alla stazione ASSAM Agugliano
     var mean = function (img){                                                          //Funzione per calcolare i valori di umidità medi dell'area per ogni immagine nella collezione
        var date = ee.String(img.get('system:index'))
-      var dateSplit = date.split('_').get(4)                                            //nomino le immagini utilizzando la data in system:index
-      var img_set = img.set('name', dateSplit)                                          //imposto il nome come proprietà dell'immagine
+      //var dateSplit = date.split('_').get(4)                                            //nomino le immagini utilizzando la data in system:index
+      var dateSlice = date.slice(17,25)
+      var img_set = img.set('name', dateSlice)                                          //imposto il nome come proprietà dell'immagine
       var mean = img_set.select('moisture').reduceRegion({
         reducer: ee.Reducer.mean(),                                                     //applico il reducer per calcolare la media
         geometry: roi,
         scale: 10})
-        var img_out = img_set.set('mean:moisture:roi',mean)                             //imposto il valore medio come proprietà dell'immagine
+        var img_out = img_set.set('moisture',mean)                                     //imposto il valore medio come proprietà dell'immagine
         return img_out
       };
     var moisture_mean = roi_moisture.map(mean)                                          //applico la funzione a tutte le immagini della collezione
-    var add = ['mean:moisture:roi', 'name'];                                            //creo una lista di nome e valore medio
-  var augmented = moisture_mean.map(function (image) {
-  return image.set('dict', image.toDictionary(add));                                    //e le imposto sotto forma di dizionario
-});
-    var final = augmented.aggregate_array('dict');                                      //estraggo le proprietà come un array
-    print(final, 'DATE E VALORI DI UMIDITA\' MEDI PER L\'AREA DI INTERESSE' );          //stampo il riepilogo di date e valori medi di umidità
-    var moisture_list = []
-    for (var i = 0; i < size; i++){
-      var img = ee.Image(moisture_mean.get(i));
-      var only_moisture = img.get('mean:moisture:roi')
-      moisture_list.push(only_moisture)}
-    print(moisture_list)
+    var add = ['moisture', 'name'];                                            //creo una lista di nome e valore medio
+    var augmented = moisture_mean.map(function (image) {
+        return image.set('dict', image.toDictionary(add));                              //e le imposto sotto forma di dizionario
+    });
+    var moisture_list = augmented.aggregate_array('dict');                              //estraggo le proprietà come un array
     
                                       
       var start = start.format (null, 'GMT')                                           //trasformo la data di inizio in stringa
@@ -1411,48 +1405,34 @@ var calcolo = ui.Button({                                                       
           
       
       var range = [];                                                                      //creo una lista vuota per i dati filtrati                   
-        for (var i = 0; i < prec.length; i++) {
-         if (prec[i].data >= start_numb && prec[i].data <= end_numb) {                     //filtro i dati in base al range di date definito dall'utente  
-          range.push(prec[i]);                                                             //aggiungo i dati filtrati alla lista vuota
+      for (var i = 0; i < prec.length; i++) {
+        if (prec[i].data >= start_numb && prec[i].data <= end_numb) {                     //filtro i dati in base al range di date definito dall'utente  
+        range.push(prec[i]);                                                             //aggiungo i dati filtrati alla lista vuota
               }
-          }
+        }
       print('Dati e precipitazioni in mm/d per il mese scelto',range)                      //stampo le date e i rispettivi valori di precipitazione per il mese scelto
+     
+      var hum = moisture_list.getInfo()
+      for (var i = 0; i < moisture_list.length; i++) {
+      parseInt(moisture_list[i].name)
+      }
+      
+      print('Dati e valori di umidità [%] per il mese scelto', hum)
+           
+      for (var i = 0; i < range.length; i++){
+      range[i].moisture = null;
+      for (var j = 0; j < hum.length; j++){
+       if (hum[j].name == range[i].data){
+         range[i].moisture = hum[j].moisture;
+          }
+        }
+      }
 
-        
-      function getDates(main) {                                                            //funzione per creare una lista di date 
-          var dates = [];                                                                  //lista vuota
-          for (var i = 0; i < main.length; i++ ) {        
-              dates.push(main[i].data);                                                    //inserisco le date nella lista
-          }
-          return dates;
-      };
-      var dates = getDates(range);                                                        //applico la funzione "getDates" al range d'interesse
+      print(range) //da sistemare
       
-      function getPrec(main) {                                                            //funzione per creare una lista di precipitazioni
-          var prec = [];                                                                  //lista vuota
-          for (var i = 0; i < main.length; i++ ) {
-              prec.push(main[i].prec_mm);                                                 //inserisco i valori di precipitazione nella lista   
-          }
-          return prec;
-      };
-      var prec = getPrec(range);                                                          //applico la funzione "getPrec" al range d'interesse
-      
-      
-      var zipped = dates.map(function(e, i) {                                             //combino le due liste in una lista di liste: 
-        return [e, prec[i]];                                                              // zipped = [[data, precipitazione],[data, precipitazione],...]
-      });
-      
-      var header = ['DATE','PREC']                                                        //creo l'header
-      var zipped = [header].concat(zipped)                                                //aggiungo l'header alla lista
-      
-      var chart = ui.Chart(zipped).setChartType('ColumnChart').setOptions({               //visualizzo in un grafico a barre
-        title: 'Precipizioni e umidità',
-        legend: {position: 'none'},
-        hAxis: {title: 'Data', titleTextStyle: {italic: false, bold: true}},
-        vAxis: {title: 'Precipitazioni (mm/d)', titleTextStyle: {italic: false, bold: true}},
-        colors: ['1d6b99']
-      });
-      print(chart);               
+      //fare una lista di liste con [data,prec,moisture]
+      //fare grafico combo
+               
     
 }});
 
