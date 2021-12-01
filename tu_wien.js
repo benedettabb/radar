@@ -1,8 +1,11 @@
 /*Da sistemare:
   -controllare se vanno bene tutti i mesi con entrambe le orbite
+  -controllare la correttezza dei valori!
   -nomi dei layers devono essere le date
-  -grafico: problema di riuscire ad inserire le info di umidità - sistemare la lista di umidità
+  -grafico: sistemare estetica
+  -sistemare commenti
 */
+
 
 
 
