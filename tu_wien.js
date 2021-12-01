@@ -1420,6 +1420,7 @@ var calcolo = ui.Button({                                                       
         }
       print('Dati e precipitazioni in mm/d per il mese scelto',range)                      //stampo le date e i rispettivi valori di precipitazione per il mese scelto
      
+     
       var hum = moisture_list.getInfo()                                 
       for (var i = 0; i < moisture_list.length; i++) {
       parseInt(moisture_list[i].name)                                                      //trasformo le stringhe di date in numeri integer per farli combaciare con quelli delle precipitazioni
@@ -1436,6 +1437,7 @@ var calcolo = ui.Button({                                                       
       }
       
       hum = cleanArray(hum);
+      
       print('Dati e valori di umidità [%] per il mese scelto', hum)                         //stampo il riepilogo dei dati di umidità medi
 
       for (var i = 0; i < range.length; i++){                                               //loop for
@@ -1475,16 +1477,55 @@ var calcolo = ui.Button({                                                       
             }	          
           return hum;	      
       };
-      var humidity = getM(range)                                                             //lista di umidità (problemi)
+      var humidity = getM(range) 
       
+      for (var k =0; k < humidity.length; k++) {                                                            //sistemo humidity
+        try{
+          if (humidity[k].moisture > -10){
+            humidity[k] = humidity[k].moisture*100}
+          else {
+            humidity[k] = null}
+        } catch (err) {
+            humidity[k] = null}
+      }
+
       
-      var zipped = dates.map(function(e, i) {return [e, prec[i]]});                          //unisco le liste
-      //var zipped = dates.map(function(e,i) {return [e, humidity[i]]});
-      var header = ['Data','Prec(mm)']// ,'Moisture']
-      var zipped = [header].concat(zipped)                                                   //aggiungo l'header
-      print(zipped)
-      var chart = ui.Chart(zipped).setChartType('ColumnChart')                               //grafico
-      print(chart)
+      var dates =ee.List(dates)
+      var prec =ee.List(prec)
+      var hum = ee.List(humidity)
+
+      var paired = ee.List.sequence(0,dates.length().subtract(1),1).map(function(i){
+        return [dates.get(i),prec.get(i),hum.get(i)]
+        })
+      var columnHeader =ee.List([['Date','Prec(mm)','Moiusture']])
+
+      paired = columnHeader.cat(paired)
+      print(paired)
+      
+      paired.evaluate(function(dataTableClient) {
+      var chart = ui.Chart(dataTableClient).setChartType('ComboChart').setOptions({
+        title: 'Precipitazioni e umidità',
+        intervals: {style: 'area'},
+        hAxis: {
+          title: 'Data',
+          titleTextStyle: {italic: false, bold: true},
+          format: '########'
+        },
+        vAxis: {title: 'Prec(mm)', titleTextStyle: {italic: false, bold: true}},
+        seriesType: 'bars',
+        series: {1: {
+          type: 'line',
+          curveType: 'function',
+          interpolateNulls: true,
+          lineWidth: 2
+          }},
+        colors: ['1d6b99','e37d05']
+    
+        
+      });
+      print(chart);
+});
+      
 }});
 
 
