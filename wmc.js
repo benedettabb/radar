@@ -1,19 +1,37 @@
+var calibration = require ("users/bene96detta/radar:moisture/calibration")
+var hydro1_coll = calibration.hydro1.map(function(img){return img.clip(hydro1)})
+var hydro2_coll = calibration.hydro2.map(function(img){return img.clip(hydro2)})
+var cerbara_coll = calibration.cerbara.map(function(img){return img.clip(cerbara_)})
+var petrelle_coll = calibration.petrelle.map(function(img){return img.clip(petrelle_)})
+var torreOlmo = calibration.torreOlmo.map(function(img){return img.clip(torre_olmo)})
+print(hydro1_coll,'hydro 1')
+print(hydro1_coll,'hydro 2')
+print(cerbara_coll,'cerbara')
+print(petrelle_coll,'petrelle')
+print(torreOlmo, 'torreOlmo')
+
+
 Map.addLayer(hydro_net1,{},'hydro net 1')
+Map.addLayer(hydro_net2,{},'hydro net 2')
+Map.addLayer(cerbara,{},'cerbara')
+Map.addLayer(petrelle,{},'petrelle')
+Map.addLayer(torreolmo,{},'torre olmo')
 // Create a planar polygon. 
-var planarPolygon = geometry
+var planarPolygon = torreolmo
 
 var january=ee.ImageCollection('COPERNICUS/S1_GRD') 
     .filterBounds(planarPolygon) 
-    .filterDate('2016-08-01','2016-10-01') 
+    .filterDate('2015-08-01','2018-01-01') 
     .select('VV', 'angle');
+print(january)
 
 var collection=ee.ImageCollection('COPERNICUS/S1_GRD') 
   .filterBounds(planarPolygon) 
   .filterDate('2016-01-01','2017-01-01');
 var s2 = ee.ImageCollection("COPERNICUS/S2")
-    .filterBounds(geometry) 
+    .filterBounds(hydro1) 
     .filterDate('2016-08-01','2016-10-01') 
-    .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 50))
+    .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
     .map (function (img) { 
       var ndvi = img.normalizedDifference(['B5','B4']).rename('ndvi');
       return img.addBands(ndvi)})
@@ -95,3 +113,4 @@ var sigma_soil = sigma_veg.map(function(image){
 print(sigma_soil)
 Map.addLayer(s2.first(),{bands:(['B4','B3','B2']), min:0, max:2000},'s2')
 Map.addLayer(ee.Image(sigma_soil.first()),{bands:(['sigma_veg']), min:0.0029, max:0.026},'wcm dataset')
+
