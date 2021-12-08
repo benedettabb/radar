@@ -1,36 +1,27 @@
 var calibration = require ("users/bene96detta/radar:moisture/calibration")
 var hydro1_coll = calibration.hydro1.map(function(img){return img.clip(hydro1)})
-var hydro2_coll = calibration.hydro2.map(function(img){return img.clip(hydro2)})
 var cerbara_coll = calibration.cerbara.map(function(img){return img.clip(cerbara_)})
 var petrelle_coll = calibration.petrelle.map(function(img){return img.clip(petrelle_)})
 var torreOlmo = calibration.torreOlmo.map(function(img){return img.clip(torre_olmo)})
-print(hydro1_coll,'hydro 1')
-print(hydro1_coll,'hydro 2')
-print(cerbara_coll,'cerbara')
-print(petrelle_coll,'petrelle')
-print(torreOlmo, 'torreOlmo')
 
 
-Map.addLayer(hydro_net1,{},'hydro net 1')
-Map.addLayer(hydro_net2,{},'hydro net 2')
-Map.addLayer(cerbara,{},'cerbara')
-Map.addLayer(petrelle,{},'petrelle')
-Map.addLayer(torreolmo,{},'torre olmo')
-// Create a planar polygon. 
-var planarPolygon = torreolmo
-
-var january=ee.ImageCollection('COPERNICUS/S1_GRD') 
-    .filterBounds(planarPolygon) 
-    .filterDate('2015-08-01','2018-01-01') 
-    .select('VV', 'angle');
-print(january)
+var s1=ee.ImageCollection('COPERNICUS/S1_GRD') 
+    .filterBounds(geometry) 
+    .filterDate('2015-08-01','2016-11-25') 
+    .map(function(img){
+      var date = ee.String(img.get('system:index'))                                         //nomino le immagini utilizzando la data in system:index
+      var dateSlice = date.slice(17,25)
+      var img_set = img.set('date', dateSlice)  
+      return img_set})   
+print(s1)
 
 var collection=ee.ImageCollection('COPERNICUS/S1_GRD') 
-  .filterBounds(planarPolygon) 
-  .filterDate('2016-01-01','2017-01-01');
+  .filterBounds(geometry) 
+  .filterDate('2015-01-01','2018-01-01');
+  
 var s2 = ee.ImageCollection("COPERNICUS/S2")
-    .filterBounds(hydro1) 
-    .filterDate('2016-08-01','2016-10-01') 
+    .filterBounds(geometry) 
+    .filterDate('2015-08-01','2018-01-01') 
     .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
     .map (function (img) { 
       var ndvi = img.normalizedDifference(['B5','B4']).rename('ndvi');
@@ -45,7 +36,8 @@ var calculateVVnorm=function(image){
   var norm = image.addBands(image.select('VV')
   .subtract(beta.multiply(image.select('angle').subtract(40)))); 
   return norm.select('VV_1').rename('VV_norm')};  
-var VVnorm =january.map(calculateVVnorm); 
+  
+var VVnorm =s1.map(calculateVVnorm); 
 
 
 // Define a max difference filter to compare timestamps.
@@ -113,4 +105,76 @@ var sigma_soil = sigma_veg.map(function(image){
 print(sigma_soil)
 Map.addLayer(s2.first(),{bands:(['B4','B3','B2']), min:0, max:2000},'s2')
 Map.addLayer(ee.Image(sigma_soil.first()),{bands:(['sigma_veg']), min:0.0029, max:0.026},'wcm dataset')
+
+
+var filter = ee.Filter.equals({
+  leftField: 'date',
+  rightField: 'date'
+});
+
+var simpleJoin = ee.Join.inner();
+
+
+//Hydro_net2 --------------------------------------------------------------------------
+var hydro2_situ = calibration.hydro2//.map(function(img){return img.clip(hydro2)})
+var hydro2_sar = sigma_soil.map(function(img){var image = ee.Image(img); return image.clip(hydro2)})
+
+var hydro2_joint = ee.ImageCollection(simpleJoin.apply(hydro2_situ, hydro2_sar, filter))
+
+var hydro2_tot = hydro2_joint.map(function(feature) {
+  return ee.Image.cat(feature.get('primary'), feature.get('secondary'));
+})
+
+//Hydro_net1 --------------------------------------------------------------------------
+var hydro1_situ = calibration.hydro1.map(function(img){return img.clip(hydro2)})
+var hydro1_sar = sigma_soil.map(function(img){var image = ee.Image(img); return image.clip(hydro2)})
+
+var hydro1_joint = ee.ImageCollection(simpleJoin.apply(hydro1_situ, hydro1_sar, filter))
+
+var hydro1_tot = hydro1_joint.map(function(feature) {
+  return ee.Image.cat(feature.get('primary'), feature.get('secondary'));
+})
+
+//cerbara --------------------------------------------------------------------------
+var cerbara_situ = calibration.cerbara.map(function(img){return img.clip(cerbara_)})
+var cerbara_sar = sigma_soil.map(function(img){var image = ee.Image(img); return image.clip(cerbara)})
+
+var cerbara_joint = ee.ImageCollection(simpleJoin.apply(cerbara_situ, cerbara_sar, filter))
+
+var cerbara_tot = cerbara_joint.map(function(feature) {
+  return ee.Image.cat(feature.get('primary'), feature.get('secondary'));
+})
+
+//petrelle --------------------------------------------------------------------------
+var petrelle_situ = calibration.petrelle.map(function(img){return img.clip(petrelle_)})
+var petrelle_sar = sigma_soil.map(function(img){var image = ee.Image(img); return image.clip(petrelle_)})
+
+var petrelle_joint = ee.ImageCollection(simpleJoin.apply(petrelle_situ, petrelle_sar, filter))
+
+var petrelle_tot = petrelle_joint.map(function(feature) {
+  return ee.Image.cat(feature.get('primary'), feature.get('secondary'));
+})
+
+//torre olmo --------------------------------------------------------------------------
+var torreOlmo_situ = calibration.torreOlmo.map(function(img){return img.clip(torre_olmo)})
+var torreOlmo_sar = sigma_soil.map(function(img){var image = ee.Image(img); return image.clip(petrelle_)})
+
+var torreOlmo_joint = ee.ImageCollection(simpleJoin.apply(torreOlmo_situ, torreOlmo_sar, filter))
+
+var torreOlmo_tot = torreOlmo_joint.map(function(feature) {
+  return ee.Image.cat(feature.get('primary'), feature.get('secondary'));
+})
+
+print('Joined', hydro1_tot)
+print('Joined', hydro2_tot)
+print('Joined', petrelle_tot)
+print('Joined', torreOlmo_tot)
+print('Joined', cerbara_tot)
+
+var tot = hydro1_tot.merge(hydro2_tot).merge(cerbara_tot).merge(petrelle_tot).merge(torreOlmo_tot)
+var regression = tot.select(['constant', 'VV_norm'])
+  .reduce(ee.Reducer.linearFit()); 
+var Cvv = regression.select('scale');
+var Dvv = regression.select('offset');
+
 
