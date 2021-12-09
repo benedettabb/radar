@@ -213,7 +213,6 @@ var cerbara_mean = cerbara_tot.map(function (img) {
 })
 var cerbara_filter = cerbara_mean.filter(ee.Filter.gt('mean', -100))
 var cerbara_mean = cerbara_filter.map(mean_band).select(['constant','sigma_soil_mean'])
-
   
 //petrelle --------------------------------------------------------------------------
 var petrelle_situ = calibration.petrelle
@@ -262,21 +261,17 @@ var torreOlmo_mean = torreOlmo_filter.map(mean_band).select(['constant','sigma_s
 
 //------------------------------------------------------------------------
 
-var tot = hydro1_mean.merge(hydro2_mean).merge(cerbara_mean).merge(petrelle_mean).merge(torreOlmo_mean)
-print(tot)
-/*
+var tot = hydro1_mean//.merge(hydro2_mean).merge(cerbara_mean).merge(petrelle_mean).merge(torreOlmo_mean)
 
-var half = tot.size().divide(2).toInt() //metà della lunghezza della collezione
+var half = tot.size().divide(1.8).toInt() //80% è usato per la calibrazione
 var calibration = ee.ImageCollection(tot.randomColumn('random',13).sort('random').limit(half));
-
 
 //regression : parametri Cvv e Dvv
 var regression = calibration.select(['constant', 'VV_norm'])
   .reduce(ee.Reducer.linearFit()); 
-
-var Cvv = ee.Image.constant(-17.6).clip(geometry)
-var Dvv = ee.Image.constant(-3.56).clip(geometry)
-
+  
+var Cvv = regression.select('offset')
+var Dvv = regression.select('slope')
 
 //umidità calcolata con il modello
 var moisture = sigma_soil.map(function (img){
@@ -288,15 +283,18 @@ var moisture = sigma_soil.map(function (img){
 })
 
 
-//VV calcolato con il modello //da sistemare per sigma tot
+//VV calcolato con il modello
 var VVwcm = moisture.map(function(img){
   var image = ee.Image(img)
   var moisture = image.select('hum_wcm')
-  var VVcalcolato = Cvv.add(Dvv.multiply(moisture)).rename('VV_wcm')
-  return image.addBands(VVcalcolato)
+  var VVsoil = Cvv.add(Dvv.multiply(moisture)).rename('VV_wcm')
+  var tau_soil = image.select('tau').multiply(VVsoil)
+  var VVwcm = image.select('sigma_veg').add(tau_soil)
+  return image.addBands(VVwcm)
 }) 
-print(VVwcm)
-Map.addLayer(ee.Image(VVwcm.first()))
+
+
+
 
 
 /*
