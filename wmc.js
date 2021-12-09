@@ -33,8 +33,9 @@ var area_torreOlmo = ee.Geometry.Polygon(
           [12.700141562090277, 43.31991481578438],
           [12.700125468836188, 43.32009629563513]]]);
 
-var area_coll = ee.FeatureCollection ([area_hydro1, area_hydro2, area_cerbara, area_petrelle, area_torreOlmo])
+var area_coll = ee.FeatureCollection ([area_hydro1, area_hydro2, area_petrelle, area_torreOlmo])
 var calibration = require ("users/bene96detta/radar:moisture/calibration")
+
 
 var s1 = ee.ImageCollection('COPERNICUS/S1_GRD')
         .filterBounds(area_coll)
@@ -42,11 +43,12 @@ var s1 = ee.ImageCollection('COPERNICUS/S1_GRD')
         .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VV'))
         .filter(ee.Filter.eq('instrumentMode', 'IW'))
         .map(function(img){
-      var date = ee.String(img.get('system:index'))                                        
-      var dateSlice = date.slice(17,25)
-      var img_set = img.set('date', dateSlice)  
-      return img_set})      
-
+          var date = ee.String(img.get('system:index'))                                        
+          var dateSlice = date.slice(17,25)
+          var img_set = img.set('date', dateSlice)  
+          return img_set
+        })    
+     
 var collection=ee.ImageCollection('COPERNICUS/S1_GRD') 
   .filterBounds(area_coll) 
   .filterDate('2015-01-01','2018-01-01');
@@ -73,7 +75,7 @@ var calculateVVnorm=function(image){
 var VVnorm =s1.map(calculateVVnorm); 
 
 var maxDiffFilter = ee.Filter.maxDifference({
-  difference: 3 * 24 * 60 * 60 * 1000,  // 259.200.000ms / 86,400,000 = 3 giorni
+  difference: 15 * 24 * 60 * 60 * 1000,  // 864,000,000ms / 86,400,000 = 15 giorni
   leftField: 'system:time_start',
   rightField: 'system:time_start'
 });
@@ -88,8 +90,9 @@ var join = saveBestJoin.apply(VVnorm , s2, maxDiffFilter);
 
 var plot = join.map(function(img) {
   var cat = ee.Image.cat([img, img.get('bestImage')]);
-  var mask = ee.Image(img.get('bestImage'));
-  var mask = mask.select('B1')
+  var image = ee.Image(img)
+  var mask0 = ee.Image(image.get('bestImage'));
+  var mask = mask0.select('B1')
   return cat.updateMask(mask)
 })
 
@@ -101,6 +104,7 @@ var dataset = plot.map(function(img){
   var add = ee.Image.cat([img, cos, Avv, Bvv]).select(['VV_norm','cos','Avv','Bvv','ndvi']);
   return add
 });
+
 
 //calcolo tau^2 per ogni pixel di ogni immagine nella image collection
 //tau^2 = exp (-2*Bvv*V*sec(theta_i))
@@ -145,7 +149,7 @@ var simpleJoin = ee.Join.inner();
 var mean_band = function(img){
   var image = ee.Image(img)
   var mean = image.get('mean')
-  var mean_band = ee.Image.constant(mean).rename('sigma_soil_mean')
+  var mean_band = ee.Image.constant(mean).toFloat().rename('sigma_soil_mean')
   return image.addBands(mean_band)
   }
   
@@ -170,6 +174,7 @@ var hydro1_mean = hydro1_tot.map(function (img) {
 })
 var hydro1_filter = hydro1_mean.filter(ee.Filter.gt('mean', -100))//filter per prendere solo le immagini che hanno un valore medio in sigma soil
 var hydro1_mean = hydro1_filter.map(mean_band).select(['constant','sigma_soil_mean'])
+
 
 
 //Hydro_net2 --------------------------------------------------------------------------
@@ -258,20 +263,28 @@ var torreOlmo_mean = torreOlmo_tot.map(function (img) {
 })
 var torreOlmo_filter = torreOlmo_mean.filter(ee.Filter.gt('mean', -100))
 var torreOlmo_mean = torreOlmo_filter.map(mean_band).select(['constant','sigma_soil_mean'])
-
 //------------------------------------------------------------------------
 
-var tot = hydro1_mean//.merge(hydro2_mean).merge(cerbara_mean).merge(petrelle_mean).merge(torreOlmo_mean)
+var calibration = hydro1_mean.merge(hydro2_mean).merge(petrelle_mean).merge(torreOlmo_mean)
 
-var half = tot.size().divide(1.8).toInt() //80% è usato per la calibrazione
-var calibration = ee.ImageCollection(tot.randomColumn('random',13).sort('random').limit(half));
 
 //regression : parametri Cvv e Dvv
-var regression = calibration.select(['constant', 'VV_norm'])
-  .reduce(ee.Reducer.linearFit()); 
-  
-var Cvv = regression.select('offset')
-var Dvv = regression.select('slope')
+var regression = calibration.select(['constant','sigma_soil_mean']).reduce(
+  ee.Reducer.linearFit());
+
+var cv = regression.reduceRegions({
+  reducer: ee.Reducer.mean(),
+  scale:10,
+  collection: area_coll, //valori per ogni area
+})
+
+var c = ee.Number(cv.reduceColumns(ee.Reducer.mean(), ['offset']).get('offset'))
+var d = ee.Number(cv.reduceColumns(ee.Reducer.mean(), ['scale']).get('slope'))
+print(c,'Cvv = intercetta =')
+print(d, 'Dvv = pendenza =')
+var Cvv = ee.Image.constant(c).toFloat() //intercetta
+var Dvv = ee.Image.constant(d).toFloat() //pendenza
+
 
 //umidità calcolata con il modello
 var moisture = sigma_soil.map(function (img){
@@ -287,26 +300,35 @@ var moisture = sigma_soil.map(function (img){
 var VVwcm = moisture.map(function(img){
   var image = ee.Image(img)
   var moisture = image.select('hum_wcm')
-  var VVsoil = Cvv.add(Dvv.multiply(moisture)).rename('VV_wcm')
+  var VVsoil = Cvv.add(Dvv.multiply(moisture)).rename('sigma_soil_wcm')
   var tau_soil = image.select('tau').multiply(VVsoil)
-  var VVwcm = image.select('sigma_veg').add(tau_soil)
-  return image.addBands(VVwcm)
+  var VVwcm = image.select('sigma_veg').add(tau_soil).rename('VV_wcm')
+  return image.addBands([VVwcm,VVsoil])
 }) 
 
-
-
-
-
+Map.addLayer((ee.Image(VVwcm.first())),{bands:'hum_wcm'},'hum')
 /*
-var VVnorm_VVwcm = ee.Image(VVwcm.first())//.select(['VV_norm','VV_wcm'])
-print(VVnorm_VVwcm)
+var VVwcm_val = VVwcm.filterDate('2016-01-01','2016-05-01').filterBounds(area_hydro1)
+var mean = VVwcm_val.map(function (img) {
+  var image = ee.Image(img);
+  var mean = image.reduceRegion ({
+    reducer: ee.Reducer.mean(),
+    geometry: area_hydro1,
+    scale:10
+    })
+  return image.set('mean',mean)
+})
+print(mean)
+
+Map.addLayer(ee.Image(mean.first()))
+
+var VVnorm_VVwcm = ee.Image(VVwcm.first()).select(['hum_wcm','VV_wcm'])
  
 // sample N points from the 2-band image
-var values = VVnorm_VVwcm.sample({ region: geometry, scale: 100, numPixels: 100})
-Map.addLayer(values)
+var values = VVnorm_VVwcm.sample({ region: geometry, scale: 10, numPixels: 700})
 
 // plot sampled features as a scatter chart
-var chart = ui.Chart.feature.byFeature(values, 'VV_norm', 'VV_wcm')
+var chart = ui.Chart.feature.byFeature(values, 'hum_wcm', 'VV_wcm')
   .setChartType('ScatterChart')
   .setOptions({ 
     title: 'σ0 vegetazione bassa',
@@ -331,6 +353,4 @@ var chart = ui.Chart.feature.byFeature(values, 'VV_norm', 'VV_wcm')
    },
     })
 
-
-Map.addLayer(VVnorm_VVwcm)   
 print(chart)  */
