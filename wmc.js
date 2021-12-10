@@ -3,6 +3,12 @@ var stazione_hydro2 =ee.Geometry.Point([12.351959770332428, 43.11722017548435]);
 var stazione_cerbara = ee.Geometry.Point([12.380008602748442, 43.55999965182553]);
 var stazione_petrelle = ee.Geometry.Point([12.170003601469753, 43.34999838609007]);
 var stazione_torreOlmo = ee.Geometry.Point([12.700002593262951, 43.3200037996784]);
+Map.addLayer(stazione_torreOlmo)
+Map.addLayer(stazione_petrelle)
+Map.addLayer(stazione_cerbara)
+Map.addLayer (stazione_hydro1)
+Map.addLayer (stazione_hydro2)
+
 
 var area_hydro1 = ee.Geometry.Polygon(
         [[[12.352296718465103, 43.11689090889345],
@@ -33,7 +39,7 @@ var area_torreOlmo = ee.Geometry.Polygon(
           [12.700141562090277, 43.31991481578438],
           [12.700125468836188, 43.32009629563513]]]);
 
-var area_coll = ee.FeatureCollection ([area_hydro1, area_hydro2, area_petrelle, area_torreOlmo])
+var area_coll = ee.FeatureCollection ([area_hydro1, area_hydro2, area_cerbara, area_petrelle, area_torreOlmo])
 var calibration = require ("users/bene96detta/radar:moisture/calibration")
 
 
@@ -42,18 +48,24 @@ var s1 = ee.ImageCollection('COPERNICUS/S1_GRD')
         .filterDate('2015-08-01','2018-12-31')
         .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VV'))
         .filter(ee.Filter.eq('instrumentMode', 'IW'))
-        .map(function(img){
-          var date = ee.String(img.get('system:index'))                                        
-          var dateSlice = date.slice(17,25)
-          var img_set = img.set('date', dateSlice)  
-          return img_set
-        })    
-     
-var collection=ee.ImageCollection('COPERNICUS/S1_GRD') 
-  .filterBounds(area_coll) 
-  .filterDate('2015-01-01','2018-01-01');
+        .map(function(img){                //mask border noise
+          var vv = img.select('VV')
+          var mask = vv.gt(-40)
+          return img.updateMask(mask)})
+          
+var linearfit=s1.select(['angle', 'VV'])  //regressione tra theta i e sigma
+  .reduce(ee.Reducer.linearFit()); 
+var beta=linearfit.select('scale');
+
+
+var calculateVVnorm=function(image){  //funzione per normalizzare
+  var norm = image.addBands(image.select('VV')
+  .subtract(beta.multiply(image.select('angle').subtract(40)))); 
+  return norm.select('VV_1').rename('VV_norm')};  
   
-var s2 = ee.ImageCollection("COPERNICUS/S2")
+var VVnorm =s1.map(calculateVVnorm); //normalizzazione
+
+var s2 = ee.ImageCollection("COPERNICUS/S2") //s2
     .filterBounds(area_coll) 
     .filterDate('2015-08-01','2018-12-31') 
     .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
@@ -61,21 +73,9 @@ var s2 = ee.ImageCollection("COPERNICUS/S2")
       var ndvi = img.normalizedDifference(['B5','B4']).rename('ndvi');
       return img.addBands(ndvi)})
 
-
-var linearfit=collection.select(['angle', 'VV'])
-  .reduce(ee.Reducer.linearFit()); 
-var beta=linearfit.select('scale');
-
-
-var calculateVVnorm=function(image){ 
-  var norm = image.addBands(image.select('VV')
-  .subtract(beta.multiply(image.select('angle').subtract(40)))); 
-  return norm.select('VV_1').rename('VV_norm')};  
-  
-var VVnorm =s1.map(calculateVVnorm); 
-
+ 
 var maxDiffFilter = ee.Filter.maxDifference({
-  difference: 15 * 24 * 60 * 60 * 1000,  // 864,000,000ms / 86,400,000 = 15 giorni
+  difference: 15 * 24 * 60 * 60 * 1000,  // 1.296.000.000ms / 86,400,000 = 15 giorni
   leftField: 'system:time_start',
   rightField: 'system:time_start'
 });
@@ -94,15 +94,18 @@ var plot = join.map(function(img) {
   var mask0 = ee.Image(image.get('bestImage'));
   var mask = mask0.select('B1')
   return cat.updateMask(mask)
-})
+}).filterBounds(area_coll)
+
 
 var dataset = plot.map(function(img){
   var normAngle = ee.Image.constant(40);
   var cos = normAngle.cos().rename('cos');
-  var Avv = ee.Image.constant(0.0950).rename('Avv');  //baghdadi winter crop
-  var Bvv = ee.Image.constant(0.5513).rename('Bvv');  //baghdadi winter crop
+  var Avv = ee.Image.constant(0.0950).toFloat().rename('Avv');  //baghdadi winter crop
+  var Bvv = ee.Image.constant(0.5513).toFloat().rename('Bvv');  //baghdadi winter crop
   var add = ee.Image.cat([img, cos, Avv, Bvv]).select(['VV_norm','cos','Avv','Bvv','ndvi']);
-  return add
+  var vv_norm = add.select('VV_norm')
+  var mask = vv_norm.gt(-40)
+  return add.updateMask(mask)
 });
 
 
@@ -138,13 +141,16 @@ var sigma_soil = sigma_veg.map(function(image){
 
 
 //-------------------------------------------------------------
-var filter = ee.Filter.equals({
-  leftField: 'date',
-  rightField: 'date'
+var maxDiffFilter = ee.Filter.maxDifference({
+  difference: 0.0416666 * 24 * 60 * 60 * 1000,  // 1ora
+  leftField: 'system:time_start',
+  rightField: 'system:time_start'
 });
 
-var simpleJoin = ee.Join.inner();
-
+var saveBestJoin = ee.Join.saveBest({
+  matchKey: 'bestImage',
+  measureKey: 'timeDiff'
+});
 
 var mean_band = function(img){
   var image = ee.Image(img)
@@ -152,19 +158,17 @@ var mean_band = function(img){
   var mean_band = ee.Image.constant(mean).toFloat().rename('sigma_soil_mean')
   return image.addBands(mean_band)
   }
-  
 
 //Hydro_net1 --------------------------------------------------------------------------
 var hydro1_situ = calibration.hydro1
 var hydro1_sar = sigma_soil
-var hydro1_joint = ee.ImageCollection(simpleJoin.apply(hydro1_situ, hydro1_sar, filter))
 
-var hydro1_tot = hydro1_joint.map(function(feature) {
-  var tot = ee.Image.cat(feature.get('primary'), feature.get('secondary'));
-  return tot.clip(area_hydro1)
-})
+var hydro1_join = saveBestJoin.apply(hydro1_sar, hydro1_situ, maxDiffFilter);
+var hydro1_plot = hydro1_join.map(function(img) {
+  var cat = ee.Image.cat([img, img.get('bestImage')]);
+  return cat})
 
-var hydro1_mean = hydro1_tot.map(function (img) {
+var hydro1_mean = hydro1_plot.map(function (img) {
   var image = ee.Image(img);
   var mean = image.select('sigma_soil').reduceRegion({
     reducer: ee.Reducer.mean(),
@@ -172,22 +176,22 @@ var hydro1_mean = hydro1_tot.map(function (img) {
     scale:10}).get('sigma_soil')
   return image.set('mean',mean)
 })
-var hydro1_filter = hydro1_mean.filter(ee.Filter.gt('mean', -100))//filter per prendere solo le immagini che hanno un valore medio in sigma soil
-var hydro1_mean = hydro1_filter.map(mean_band).select(['constant','sigma_soil_mean'])
 
+var hydro1_mean = hydro1_mean.map(mean_band)
 
+var hydro1_filter = hydro1_mean.filter(ee.Filter.gt('mean', -100)).map(function(img){var image = ee.Image(img);return image.clip(area_hydro1)})
+print('hydro1', hydro1_filter)
 
 //Hydro_net2 --------------------------------------------------------------------------
 var hydro2_situ = calibration.hydro2
 var hydro2_sar = sigma_soil
-var hydro2_joint = ee.ImageCollection(simpleJoin.apply(hydro2_situ, hydro2_sar, filter))
 
-var hydro2_tot = hydro2_joint.map(function(feature) {
-  var tot = ee.Image.cat(feature.get('primary'), feature.get('secondary'));
-  return tot.clip(area_hydro2)
-})
+var hydro2_join = saveBestJoin.apply(hydro2_sar, hydro2_situ, maxDiffFilter);
+var hydro2_plot = hydro2_join.map(function(img) {
+  var cat = ee.Image.cat([img, img.get('bestImage')]);
+  return cat})
 
-var hydro2_mean = hydro2_tot.map(function (img) {
+var hydro2_mean = hydro2_plot.map(function (img) {
   var image = ee.Image(img);
   var mean = image.select('sigma_soil').reduceRegion({
     reducer: ee.Reducer.mean(),
@@ -195,20 +199,23 @@ var hydro2_mean = hydro2_tot.map(function (img) {
     scale:10}).get('sigma_soil')
   return image.set('mean',mean)
 })
-var hydro2_filter = hydro2_mean.filter(ee.Filter.gt('mean', -100))
-var hydro2_mean = hydro2_filter.map(mean_band).select(['constant','sigma_soil_mean'])
-  
+
+var hydro2_mean = hydro2_mean.map(mean_band)
+
+var hydro2_filter = hydro2_mean.filter(ee.Filter.gt('mean', -100)).map(function(img){var image = ee.Image(img);return image.clip(area_hydro2)})
+print('hydro2', hydro2_filter)
+
+
 //cerbara --------------------------------------------------------------------------
 var cerbara_situ = calibration.cerbara
 var cerbara_sar = sigma_soil
-var cerbara_joint = ee.ImageCollection(simpleJoin.apply(cerbara_situ, cerbara_sar, filter))
 
-var cerbara_tot = cerbara_joint.map(function(feature) {
-  var tot = ee.Image.cat(feature.get('primary'), feature.get('secondary'));
-  return tot.clip(area_cerbara)
-})
+var cerbara_join = saveBestJoin.apply(cerbara_sar, cerbara_situ, maxDiffFilter);
+var cerbara_plot = cerbara_join.map(function(img) {
+  var cat = ee.Image.cat([img, img.get('bestImage')]);
+  return cat})
 
-var cerbara_mean = cerbara_tot.map(function (img) {
+var cerbara_mean = cerbara_plot.map(function (img) {
   var image = ee.Image(img);
   var mean = image.select('sigma_soil').reduceRegion({
     reducer: ee.Reducer.mean(),
@@ -216,21 +223,22 @@ var cerbara_mean = cerbara_tot.map(function (img) {
     scale:10}).get('sigma_soil')
   return image.set('mean',mean)
 })
-var cerbara_filter = cerbara_mean.filter(ee.Filter.gt('mean', -100))
-var cerbara_mean = cerbara_filter.map(mean_band).select(['constant','sigma_soil_mean'])
-  
+
+var cerbara_mean = cerbara_mean.map(mean_band)
+
+var cerbara_filter = cerbara_mean.filter(ee.Filter.gt('mean', -100)).map(function(img){var image = ee.Image(img);return image.clip(area_cerbara)})
+print('cerbara', cerbara_filter)
+
 //petrelle --------------------------------------------------------------------------
 var petrelle_situ = calibration.petrelle
 var petrelle_sar = sigma_soil
 
-var petrelle_joint = ee.ImageCollection(simpleJoin.apply(petrelle_situ, petrelle_sar, filter))
+var petrelle_join = saveBestJoin.apply(petrelle_sar, petrelle_situ, maxDiffFilter);
+var petrelle_plot = petrelle_join.map(function(img) {
+  var cat = ee.Image.cat([img, img.get('bestImage')]);
+  return cat})
 
-var petrelle_tot = petrelle_joint.map(function(feature) {
-  var tot = ee.Image.cat(feature.get('primary'), feature.get('secondary'));
-  return tot.clip(area_petrelle)
-})
-
-var petrelle_mean = petrelle_tot.map(function (img) {
+var petrelle_mean = petrelle_plot.map(function (img) {
   var image = ee.Image(img);
   var mean = image.select('sigma_soil').reduceRegion({
     reducer: ee.Reducer.mean(),
@@ -238,22 +246,22 @@ var petrelle_mean = petrelle_tot.map(function (img) {
     scale:10}).get('sigma_soil')
   return image.set('mean',mean)
 })
-var petrelle_filter = petrelle_mean.filter(ee.Filter.gt('mean', -100))
-var petrelle_mean = petrelle_filter.map(mean_band).select(['constant','sigma_soil_mean'])
 
-  
+var petrelle_mean = petrelle_mean.map(mean_band)
+
+var petrelle_filter = petrelle_mean.filter(ee.Filter.gt('mean', -100)).map(function(img){var image = ee.Image(img);return image.clip(area_petrelle)})
+print('petrelle', petrelle_filter)
+
 //torre olmo --------------------------------------------------------------------------
 var torreOlmo_situ = calibration.torreOlmo
 var torreOlmo_sar = sigma_soil
 
-var torreOlmo_joint = ee.ImageCollection(simpleJoin.apply(torreOlmo_situ, torreOlmo_sar, filter))
+var torreOlmo_join = saveBestJoin.apply(torreOlmo_sar, torreOlmo_situ, maxDiffFilter);
+var torreOlmo_plot = torreOlmo_join.map(function(img) {
+  var cat = ee.Image.cat([img, img.get('bestImage')]);
+  return cat})
 
-var torreOlmo_tot = torreOlmo_joint.map(function(feature) {
-  var tot = ee.Image.cat(feature.get('primary'), feature.get('secondary'))
-  return tot.clip(area_torreOlmo);
-})
-
-var torreOlmo_mean = torreOlmo_tot.map(function (img) {
+var torreOlmo_mean = torreOlmo_plot.map(function (img) {
   var image = ee.Image(img);
   var mean = image.select('sigma_soil').reduceRegion({
     reducer: ee.Reducer.mean(),
@@ -261,29 +269,33 @@ var torreOlmo_mean = torreOlmo_tot.map(function (img) {
     scale:10}).get('sigma_soil')
   return image.set('mean',mean)
 })
-var torreOlmo_filter = torreOlmo_mean.filter(ee.Filter.gt('mean', -100))
-var torreOlmo_mean = torreOlmo_filter.map(mean_band).select(['constant','sigma_soil_mean'])
+
+var torreOlmo_mean = torreOlmo_mean.map(mean_band)
+
+var torreOlmo_filter = torreOlmo_mean.filter(ee.Filter.gt('mean', -100)).map(function(img){var image = ee.Image(img);return image.clip(area_torreOlmo)})
+print('torreOlmo', torreOlmo_filter)
+
+
 //------------------------------------------------------------------------
 
-var calibration = hydro1_mean.merge(hydro2_mean).merge(petrelle_mean).merge(torreOlmo_mean)
-
+var calibration = ee.ImageCollection(hydro1_mean).merge(hydro2_mean).merge(cerbara_mean).merge(petrelle_mean).merge(torreOlmo_mean)
 
 //regression : parametri Cvv e Dvv
 var regression = calibration.select(['constant','sigma_soil_mean']).reduce(
   ee.Reducer.linearFit());
 
-var cv = regression.reduceRegions({
+var cv = regression.reduceRegion({
   reducer: ee.Reducer.mean(),
   scale:10,
-  collection: area_coll, //valori per ogni area
+  geometry:area_coll, //valori per ogni area
 })
-
-var c = ee.Number(cv.reduceColumns(ee.Reducer.mean(), ['offset']).get('offset'))
-var d = ee.Number(cv.reduceColumns(ee.Reducer.mean(), ['scale']).get('slope'))
-print(c,'Cvv = intercetta =')
-print(d, 'Dvv = pendenza =')
-var Cvv = ee.Image.constant(c).toFloat() //intercetta
-var Dvv = ee.Image.constant(d).toFloat() //pendenza
+print(cv)
+var c = ee.Number(cv.get('offset'))
+var d = ee.Number(cv.get('scale'))
+print('Cvv = intercetta =',c)
+print('Dvv = pendenza =',d)
+var Cvv = ee.Image.constant(c).toFloat() //intercetta  (deve essere negativo > sigma_soil db)
+var Dvv = ee.Image.constant(d).toFloat() //pendenza     (deve essere positivo)
 
 
 //umidità calcolata con il modello
@@ -294,7 +306,15 @@ var moisture = sigma_soil.map(function (img){
   var hum = num.divide(den).rename('hum_wcm')
   return image.addBands(hum)
 })
+var list = moisture.toList(6);                                                   //trasformo la collezione di immaigni in una lista della lunghezza individuata prima
+    
+for(var i = 0; i < 5; i++){                                                      // client side loop per visualizzare le immagini nella mappa
+var image = ee.Image(list.get(i));
+var name = image.get('name');
+Map.addLayer(image, {bands:'hum_wcm',min:0,max:1}, i.toString(), 1)                            //cambiare nome delle immagini!
+}
 
+/*
 
 //VV calcolato con il modello
 var VVwcm = moisture.map(function(img){
@@ -306,7 +326,7 @@ var VVwcm = moisture.map(function(img){
   return image.addBands([VVwcm,VVsoil])
 }) 
 
-Map.addLayer((ee.Image(VVwcm.first())),{bands:'hum_wcm'},'hum')
+Map.addLayer((ee.Image(VVwcm.first())),{bands:'hum_wcm',min:0,max:1},'hum')
 /*
 var VVwcm_val = VVwcm.filterDate('2016-01-01','2016-05-01').filterBounds(area_hydro1)
 var mean = VVwcm_val.map(function (img) {
@@ -319,13 +339,14 @@ var mean = VVwcm_val.map(function (img) {
   return image.set('mean',mean)
 })
 print(mean)
-
 Map.addLayer(ee.Image(mean.first()))
+var mean = mean.aggreggtate_array('mean')
+print(mean)
 
-var VVnorm_VVwcm = ee.Image(VVwcm.first()).select(['hum_wcm','VV_wcm'])
+var hum_vv = ee.Image(VVwcm.first()).select(['hum_wcm','VV_norm'])
  
 // sample N points from the 2-band image
-var values = VVnorm_VVwcm.sample({ region: geometry, scale: 10, numPixels: 700})
+var values = hum_vv.sample({ region: hum_vv.geometry(), scale: 10, numPixels: 700})
 
 // plot sampled features as a scatter chart
 var chart = ui.Chart.feature.byFeature(values, 'hum_wcm', 'VV_wcm')
