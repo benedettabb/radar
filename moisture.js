@@ -93,9 +93,9 @@ var sigma_soil = sigma_veg.map(function(image){
 });
 
     
-var sigma_soil = ee.ImageCollection(sigma_soil).select(['sigma_soil','VV_norm'])
-var dry = sigma_soil.select('sigma_soil').min(); 
-var wett = sigma_soil.select('sigma_soil').max(); 
+var sigma_soil_tuWien = ee.ImageCollection(sigma_soil).select(['sigma_soil','VV_norm'])
+var dry = sigma_soil_tuWien.select('sigma_soil').min(); 
+var wett = sigma_soil_tuWien.select('sigma_soil').max(); 
 var sensitivity = wett.subtract(dry); 
 var SMmax=0.35; 
 var SMmin=0.05;
