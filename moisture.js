@@ -93,15 +93,16 @@ var sigma_soil = sigma_veg.map(function(image){
 });
 
     
-var sigma_soil_tuWien = ee.ImageCollection(sigma_soil).select(['sigma_soil','VV_norm'])
-var dry = sigma_soil_tuWien.select('sigma_soil').min(); 
-var wett = sigma_soil_tuWien.select('sigma_soil').max(); 
+var sigma_soil = ee.ImageCollection(sigma_soil).select(['sigma_soil','VV_norm'])
+var dry = sigma_soil.select('sigma_soil').min(); 
+var wett = sigma_soil.select('sigma_soil').max(); 
 var sensitivity = wett.subtract(dry); 
 var SMmax=0.35; 
 var SMmin=0.05;
  
 
 var moisture =function (image){ 
+  var image = ee.Image(image);
   var mv = image.select('sigma_soil').subtract(dry)
            .divide(sensitivity)
   var ma = mv.multiply(SMmax-SMmin).add(SMmin)
@@ -109,7 +110,7 @@ var moisture =function (image){
   return image.addBands(max100); 
   }; 
  
-var ssm_tuWien = sigma_soil_tuWien.map(moisture) 
+var ssm_tuWien = sigma_soil.map(moisture) 
 print(ssm_tuWien)
 
 var list = ssm_tuWien.toList(20)
@@ -180,7 +181,7 @@ var Dvv = ee.Image.constant(2.39).toFloat() //pendenza
 
 
 //umidità calcolata con il modello
-var moisture = sigma_soil.map(function (img){
+var moisture =ssm_tuWien.map(function (img){
   var image = ee.Image(img)
   var hum = Cvv.add(Dvv.multiply(image.select('sigma_soil'))).rename('hum_wcm')
   return image.addBands(hum)
@@ -191,7 +192,7 @@ var moisture = sigma_soil.map(function (img){
 //VVwcm =sigma_veg + tau^2((sm-Cvv)/Dvv)
 var VVwcm = moisture.map(function(img){
   var image = ee.Image(img)
-  var moisture = image.select('hum_wcm')
+  var moisture = image.select('hum_tuWien')
   var num = moisture.subtract(Cvv)
   var den = Dvv
   var VVsoil = num.divide(den)
