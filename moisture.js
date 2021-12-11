@@ -146,7 +146,7 @@ var chart_sigma_soil = ui.Chart.feature.byFeature(values,'sigma_soil','hum_tuWie
    },
     })
 
-//print(chart_sigma_soil)
+print('Scatter plot sigma soil hum TuWien',chart_sigma_soil)
 
 var chart_vv = ui.Chart.feature.byFeature(values,'VV_norm','hum_tuWien')
   .setChartType('ScatterChart')
@@ -172,7 +172,7 @@ var chart_vv = ui.Chart.feature.byFeature(values,'VV_norm','hum_tuWien')
    },
     })
 
-//print(chart_vv)
+print('Scatter plot sigma tot hum TuWien', chart_vv)
  
 
 var Cvv = ee.Image.constant(37.237).toFloat() //intercetta
@@ -239,7 +239,7 @@ var chart_vv = ui.Chart.feature.byFeature(values2,'VV_norm','VV_wcm')
    },
     })
 
-print(chart_vv)
+print('Scatter plot tra VV sar e VV del modello wcm',chart_vv)
 
 var rmse = values2.map(function (feature){
   var diff = ee.Number(feature.get('VV_norm')).subtract(ee.Number(feature.get('VV_wcm')))
@@ -252,5 +252,29 @@ var bias = values2.map(function (feature){
   return feature.set('diff',diff)}).reduceColumns(ee.Reducer.mean(), ['diff']).get('mean')
 print('Bias tra VV sar e VV del modello wcm',bias) 
 
+var chart_hum = ui.Chart.feature.byFeature(values2,'hum_wcm','hum_tuWien')
+  .setChartType('ScatterChart')
+  .setOptions({ 
+    pointSize: 2, 
+    colors: ['black'], 
+    dataOpacity: 0.5,
+    width: 200, 
+    height: 500, 
+    titleX: 'σ norm [dB]', 
+    titleY: 'σ wcm [dB]',
+    //hAxis: {viewWindow: {min: -20, max: 5}},
+    //vAxis: {viewWindow: {min: -20, max: 5}},
+    trendlines: {
+    0: {  
+      type: 'linear',  
+      color: 'black',
+      lineDashStyle: [4, 4],
+      lineWidth: 2,
+      showR2: true,
+      visibleInLegend: true
+    }
+   },
+    })
 
+print('Scatter plot tra hum tuWien e humWCM',chart_hum)
       
