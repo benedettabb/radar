@@ -111,7 +111,6 @@ var moisture =function (image){
   }; 
  
 var ssm_tuWien = sigma_soil.map(moisture) 
-print(ssm_tuWien)
 
 var list = ssm_tuWien.toList(20)
 for(var i = 0; i < 5; i++){                                                      
@@ -147,7 +146,7 @@ var chart_sigma_soil = ui.Chart.feature.byFeature(values,'sigma_soil','hum_tuWie
    },
     })
 
-print(chart_sigma_soil)
+//print(chart_sigma_soil)
 
 var chart_vv = ui.Chart.feature.byFeature(values,'VV_norm','hum_tuWien')
   .setChartType('ScatterChart')
@@ -173,7 +172,7 @@ var chart_vv = ui.Chart.feature.byFeature(values,'VV_norm','hum_tuWien')
    },
     })
 
-print(chart_vv)
+//print(chart_vv)
  
 
 var Cvv = ee.Image.constant(37.237).toFloat() //intercetta
@@ -207,7 +206,7 @@ var list = moisture.toList(6);                                                  
 for(var i = 0; i < 5; i++){                                                      // client side loop per visualizzare le immagini nella mappa
 var image = ee.Image(list.get(i));
 var name = image.get('name');
-Map.addLayer(image, {bands:'hum_wcm',min:5,max:35}, i.toString(), 1)                            //cambiare nome delle immagini!
+Map.addLayer(image, {bands:'hum_wcm',min:5,max:35}, i.toString(), 0)                            //cambiare nome delle immagini!
 }
 
 
@@ -242,37 +241,16 @@ var chart_vv = ui.Chart.feature.byFeature(values2,'VV_norm','VV_wcm')
 
 print(chart_vv)
 
+var rmse = values2.map(function (feature){
+  var diff = ee.Number(feature.get('VV_norm')).subtract(ee.Number(feature.get('VV_wcm')))
+  var quadr = diff.pow(2)
+  return feature.set('diff^2',quadr)}).reduceColumns(ee.Reducer.mean(), ['diff^2']).get('mean')
+print('RMSE tra VV sar e VV del modello wcm',rmse)
 
-
-
+var bias = values2.map(function (feature){
+  var diff = ee.Number(feature.get('VV_norm')).subtract(ee.Number(feature.get('VV_wcm')))
+  return feature.set('diff',diff)}).reduceColumns(ee.Reducer.mean(), ['diff']).get('mean')
+print('Bias tra VV sar e VV del modello wcm',bias) 
 
 
       
-/*            
-var mean = function (img){                                                          //Funzione per calcolare i valori di umidità medi dell'area per ogni immagine nella collezione
-  var date = ee.String(img.get('system:index'))                                          //nomino le immagini utilizzando la data in system:index
-  var dateSlice = date.slice(17,32)
-  var img_set = img.set('name', dateSlice)                                          //imposto il nome come proprietà dell'immagine
-  var mean = img_set.select('moisture').reduceRegion({
-  reducer: ee.Reducer.mean(),                                                     //applico il reducer per calcolare la media
-  geometry: VEGETAZIONE2,
-  scale: 10})
-  var img_out = img_set.set('moisture',mean)                                     //imposto il valore medio come proprietà dell'immagine
-  return img_out
-};
-var moisture_mean = roi_moisture.map(mean)                                          //applico la funzione a tutte le immagini della collezione
-var add = ['moisture', 'name'];                                            //creo una lista di nome e valore medio
-var augmented = moisture_mean.map(function (image) {
-return image.set('dict', image.toDictionary(add));                              //e le imposto sotto forma di dizionario
-    });
-var moisture_list = augmented.aggregate_array('dict');                              //estraggo le proprietà come un array
-    
-                                                                       //trasformo in numero e trasferisco sul client
-var roi_moisture = roi_moisture.map(function (img){
-  var cento = ee.Image.constant(100);
-  return img.multiply(cento)})
-  
-  
-var VVnorm = VVnorm.combine(roi_moisture)
-
-*/
