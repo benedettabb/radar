@@ -66,7 +66,7 @@ var p117sett2020 = tN.corr(filter.filterFunction(ee.Image ("COPERNICUS/S1_GRD_FL
 var p117dic2020 = tN.corr(filter.filterFunction(ee.Image ("COPERNICUS/S1_GRD_FLOAT/S1B_IW_GRDH_1SDV_20201222T170535_20201222T170600_024818_02F3DF_F219"))).clip(region)
 
 
-//faccio i mosaici
+//mosaici
 var asc2014ott = sr.span_ratioGEE(ee.ImageCollection ([p44ott2014,p117ott2014]).mean())
 var asc2014dic = sr.span_ratioGEE(ee.ImageCollection ([p44dic2014,p117dic2014]).mean())
 var asc2015set = sr.span_ratioGEE(ee.ImageCollection ([p44ago2015,p117sett2015]).mean())
