@@ -1,12 +1,10 @@
 //funzione che applica il refinedLeeFilter alle due bande di un'immagine radar
 //l'outpu è un'immagine con bande "VV filtrata", "VH filtrata", "angle"
-//iterando la funzione con .map() si può applicare il filtro ad ogni immagine di una collezione
 
-//richiede la funzione refinedLeeFilter (cambiare path se necessario!)
+//richiede la funzione refinedLeeFilter (cambiare path)
 var lee = require ("users/bene96detta/AnalysisReadyData:preprocessing/refinedLeeFilter")
 
-//richiede le funzioni toNatural e toDB (cambiare path se necessario!)
-//il filtro va applicato all'immagine lineare e non a quella in dB (un'altra possibilità sarebbe quella di usare la nuova collezione "S1...GRD_FLOAT")
+//richiede le funzioni toNatural e toDB (cambiare path)
 var from_to_dB = require ("users/bene96detta/AnalysisReadyData:preprocessing/from_to_dB")
 
 
