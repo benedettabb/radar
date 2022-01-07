@@ -25,7 +25,7 @@ var tN = require("users/bene96detta/radar:preprocessing/terrainNorm")
 //clip collection
 var cc = function(image){return image.clip(region)}
 
-//nornalizzazione di ogni immagine
+//normalizzazione di ogni immagine + filtro per lo speckle
 
 //PATH 95
 var p95ott2014 = tN.corr(filter.filterFunction(ee.Image ("COPERNICUS/S1_GRD_FLOAT/S1A_IW_GRDH_1SDV_20141012T051913_20141012T051938_002792_003250_68A8"))).clip(region)
@@ -84,7 +84,7 @@ var p22dic2020_2 = tN.corr(filter.filterFunction(ee.Image("COPERNICUS/S1_GRD_FLO
 var p22dic2020= ee.ImageCollection ([p22dic2020_1, p22dic2020_2]).mean()
 
 
-//faccio i mosaici
+//mosaici
 var desc2014ott = sr.span_ratioGEE(ee.ImageCollection ([p95ott2014, p22ott2014]).mean())
 var desc2014dic = sr.span_ratioGEE(ee.ImageCollection([p95dic2014, p22dic2014]).mean())
 var desc2015set = sr.span_ratioGEE(ee.ImageCollection([p95set2015,p22ago2015]).mean())
