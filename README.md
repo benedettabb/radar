@@ -5,6 +5,5 @@
 
 *Benedetta Brunelli (2021)*
 
-*Corso di Geografia e Processi Territoriali,*
-
+*Corso di Geografia e Processi Territoriali,*                                                                                                                      
 *Alma Mater Studiorum - Università di Bologna.*
