@@ -1,7 +1,7 @@
 //GRD di Google Earth Engine
 //ORBITE ASCENDENTI
 
-//importo l'area d'interesse
+//importo l'area d'interesse (cambiare path)
 var region = require("users/bene96detta/radar:preprocessing/area");
 region = region.addRegion();
 
