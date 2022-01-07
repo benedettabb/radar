@@ -3,4 +3,4 @@
 
 ![image](https://github.com/benedettabb/agricolture-moisture-Marche/blob/2674c772e1841fd043c95112131fcb6d4f5a2ef5/img.jpg)
 
-Benedetta Brunelli, Corso di Geografia e Processi Territoriali 2020/2021, Alma Mater Studiorum - Università di Bologna.
+Benedetta Brunelli, Corso di Geografia e Processi Territoriali 2020-2021, Alma Mater Studiorum - Università di Bologna.
