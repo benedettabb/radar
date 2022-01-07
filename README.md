@@ -2,7 +2,6 @@
 
 
 
-
 Scaricare lo shape file della regione Marche, 
 importarlo in Google Earth Engine 
 e modificare il percorso della variabile "region"
