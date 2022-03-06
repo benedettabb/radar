@@ -1,4 +1,4 @@
-## Applicazione di dati SAR in Google Earth Engine per la stima dell’umidità del suolo nelle aree agricole marchigiane estratte tramite classificazione
+## Stima   dell’umidità   del   suolo nelle   aree   agricole   marchigiane mediante   dati   SAR
 
 
 ![image](https://github.com/benedettabb/agricolture-moisture-Marche/blob/f7cf75604f8a211d90f73f504ae89c8090657450/MARCHE/img.jpg)
