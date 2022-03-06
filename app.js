@@ -488,6 +488,7 @@ var calcolo = ui.Button({
         var hum = Cvv.add(Dvv.multiply(image.select("sigma_soil"))).rename("moisture")
         return image.addBands(hum).select("moisture")
     }) 
+    
 //////////////////////////////////////////////////////////////////////////////////////////      
     } else {
       var error3 = ui.Label(' ⛔ choose a soil moisture retrieval method!')
@@ -501,7 +502,7 @@ var calcolo = ui.Button({
           var img = ee.Image(image)
           return img.updateMask(mask)
         }
-    var moisture_mask = moisture.map(mask_function).map(function(img){return img.clip(aoi)})
+    var moisture_mask = moisture.map(mask_function).map(function(img){var image = ee.Image(img); return image.clip(aoi)})
 
 //////////////////////////////////////////////////////////////////////////////////////////////    
 //MOSTRA I RISULTATI
@@ -522,7 +523,6 @@ var calcolo = ui.Button({
     
     var size = moisture_mask.size().getInfo() 
     var list = moisture_mask.toList(size)
-    print(moisture_mask)
     for(var i = 0; i < size; i++){                                                      
     var image = ee.Image(list.get(i));
     var date = ee.Image(list.get(i)).get('system:index')
@@ -552,24 +552,24 @@ var calcolo = ui.Button({
   // Reduction scale is based on map scale to avoid memory/timeout errors.
   var mapScale = Map.getScale();
   var scale = mapScale > 5000 ? mapScale * 2 : 5000;
-  var property;
-  if(norm === 'Angle_based') {                                                    
-    property = 'segmentStartTime'
-    } else if (norm == 'Linear_based') {                                              //Se il metodo di nomalizzazione scelto è "Linear_based"
-    property = 'system:time_start'                                              //Applico la corrispondente funzione di normalizzazione a tutte le immagini della collezione
-    }
+  var title;
+  if (method === 'WaterCloudModel') { 
+    title = 'Water Cloud model'
+  } else if (method === 'TuWien') {
+    title = 'Tu Wien model'
+  }
+  
   var chart = ui.Chart.image
                   .series({
                     imageCollection: moisture_mask,
                     region: aoi,
                     reducer: ee.Reducer.mean(),
-                    //band: 'moisture',
                     scale: scale,
                     xProperty: 'system:time_start'
                   })
                   .setOptions({
-                    title: 'Mean moisture values [%]',
-                    legend: {position: 'none'},
+                    title: title,
+                    legend: {position:'none'},
                     pointSize: 3,
                     hAxis: {title: 'Date'},
                     vAxis: {title: 'Moisture [%]'},
