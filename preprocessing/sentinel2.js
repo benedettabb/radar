@@ -1,10 +1,8 @@
-
-
-//area d'interesse
+//area of interest
 var region = require("users/bene96detta/radar:preprocessing/area");
 region = region.addRegion();
 
-//funzione per calcolare l'NDVI
+//add NDVI
 var ndvi = require("users/bene96detta/radar:preprocessing/ndvi")
 
 //Function to mask clouds using sentinel 2 CLOUD PROBABILITY 
@@ -23,17 +21,6 @@ var s2 = ee.ImageCollection('COPERNICUS/S2')
                   .map(function(img){return img.clip(region)})
                   
 
-var rgbVis = {
-  min: 0,
-  max: 3000,
-  bands: ['B4', 'B3', 'B2'],
-};
-var falseVis = {
-  min: 0,
-  max:0.3,
-  bands: ['B6','B4','B3'],
-};
-
 
 
 function indexJoin(collectionA, collectionB, propertyName) {
@@ -51,7 +38,7 @@ function indexJoin(collectionA, collectionB, propertyName) {
 }
 
 var dataset = indexJoin(s2, s2c, 'cloud_probability');
-print(dataset)
+
 
 
 
@@ -103,3 +90,15 @@ var s2201909_ndvi = ndvi.ndviFunction (s2201909)
 var s2201912_ndvi = ndvi.ndviFunction (s2201912)
 var s2202009_ndvi = ndvi.ndviFunction (s2202009)
 var s2202012_ndvi = ndvi.ndviFunction (s2202012)
+
+
+//Export
+Export.image.toAsset ({
+  image:s2201712_ndvi,
+  description: 's2201712',
+  assetId: 's2201712',
+  scale:10,
+  region: region,
+  maxPixels:10e10,
+});
+//...
