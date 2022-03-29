@@ -1,6 +1,6 @@
 //import GRD SLC e Sentinel2 preprocessed
 //pick your training data
-//import shapefile of Ancona
+//import shapefile of Macerata
 
 
 //to db
