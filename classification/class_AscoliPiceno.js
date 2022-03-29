@@ -1,3 +1,6 @@
+//import SLC GRD e Sentinel2 data
+//import shape file of Ascoli Piceno
+
 //to db
 var toDB = require("users/bene96detta/radar:preprocessing/from_to_dB")
 
@@ -21,7 +24,7 @@ var asc202009 = norm.normASC(toDB.toDB(asc202009))
 var asc202012 = norm.normASC(toDB.toDB(asc202012))
 
 
-//combine GRD SLC e Sentienel2
+//combine GRD SLC e Sentienel2 //Ascoli Piceno shape file
 var tot201509 = ee.Image.cat ([asc201509, asc201509dec, s2201509]).clip(ap)
 var tot201512 = ee.Image.cat ([asc201512, asc201512dec, s2201512]).clip(ap)
 var tot201609 = ee.Image.cat ([asc201609, asc201609dec, s2201609]).clip(ap)
