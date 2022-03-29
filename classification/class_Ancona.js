@@ -8,6 +8,7 @@ var toDB = require("users/bene96detta/radar:preprocessing/from_to_dB")
 //angle normalization
 var norm= require("users/bene96detta/radar:preprocessing/angleNormalization")
 
+//ASCENDING
 
 //GRD
 var asc201509 = norm.normASC(toDB.toDB(asc201509))
