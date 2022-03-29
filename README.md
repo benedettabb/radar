@@ -19,7 +19,13 @@
 * sentinel2 requires:
        > area
        > ndvi
- 3. Classification
+* #EXPORT TO ASSET
+ 3. Classification require:
+       > from_to_db
+       > angleNormalization
+* #EXPORT TO ASSET
+
+
 
 *Benedetta Brunelli (2021)*
 
