@@ -4,17 +4,17 @@
 1. Preprocessing: functions to pre-process data.
 2. Data: 
 * sentinel1GRDasc/desc requires 
-      *area
-      *filterFunction
-      *span_ratio
-      *terrainNorm
+      > area
+      > filterFunction
+      > span_ratio
+      > terrainNorm
  * sentinel1SLCascDEC/descDEC requires
-       * - area
-       * - filterFunction
-       * - mask0values
+       > area
+       > filterFunction
+       > mask0values
 * sentinel2 requires
-       * - area
-       * - ndvi
+       > area
+       > ndvi
  3. Classification
 
 ![image](https://github.com/benedettabb/agricolture-moisture-Marche/blob/f7cf75604f8a211d90f73f504ae89c8090657450/MARCHE/img.jpg)
