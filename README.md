@@ -5,7 +5,8 @@
 
 
 ## Table of Contents
-1. Preprocessing: functions to pre-process data.
+1. Preprocessing: functions to pre-process data
+***
 2. Data: 
 * sentinel1GRDasc/desc requires:
       > area
@@ -17,15 +18,15 @@
        >filterFunction
        >mask0values
 * sentinel2 requires:
-       > area***
-       > ndvi***
+       > area
+       > ndvi
 * EXPORT TO ASSET
 ***
  3. Classification requires:
        > from_to_db
        > angleNormalization
 * EXPORT TO ASSET
-
+***
 
 
 *Benedetta Brunelli (2021)*
