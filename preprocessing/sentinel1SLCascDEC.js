@@ -11,7 +11,7 @@ var filter = require ("users/bene96detta/radar:preprocessing/filterFunction");
 //mask0values pixels
 var mask = require("users/bene96detta/radar:preprocessing/mask0values")
 
-//funzione per ritagliare sull'area di interesse
+//clip
 var clip = function(img){
   return img.clip(region)};
   
