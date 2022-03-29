@@ -13,17 +13,17 @@
       > span_ratio
       > terrainNorm
  * sentinel1SLCascDEC/descDEC requires:
-       > area
-       > filterFunction
-       > mask0values
+       >area
+       >filterFunction
+       >mask0values
 * sentinel2 requires:
        > area
        > ndvi
-* #EXPORT TO ASSET
- 3. Classification require:
+* EXPORT TO ASSET
+ 3. Classification requires:
        > from_to_db
        > angleNormalization
-* #EXPORT TO ASSET
+* EXPORT TO ASSET
 
 
 
