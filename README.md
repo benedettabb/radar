@@ -22,7 +22,8 @@
        > ndvi
 * EXPORT TO ASSET
 ***
- 3. Classification requires:
+ 3. Classification 
+  * requires:
        > from_to_db
        > angleNormalization
 * EXPORT TO ASSET
