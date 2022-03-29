@@ -1,4 +1,4 @@
-//import sentinel1 GRD, SLC e Sentinel2
+//import GRD SLC e Sentinel2 preprocessed
 //pick your training data
 
 
@@ -8,7 +8,6 @@ var toDB = require("users/bene96detta/radar:preprocessing/from_to_dB")
 //angle normalization
 var norm= require("users/bene96detta/radar:preprocessing/angleNormalization")
 
-//ASCENDING
 
 //GRD
 var asc201509 = norm.normASC(toDB.toDB(asc201509))
@@ -238,7 +237,7 @@ print(asc_trainingAcc,'kappa sul training set')
 
 
 var params = {min:0,max:5, palette: ['256706','orange','blue','6fff0c','white','brown']}
-var paramsC = {min:0,max:5, palette: ['white','white','white','white','black','white']}
+
 
 
 Map.addLayer(ee.Image(asc_class.toList(12).get(0)),params, '201509',0)
@@ -261,18 +260,18 @@ Map.addLayer(ee.Image(asc_class.toList(12).get(11)),params, '202012',0)
 ////////////////////////////////////////////////////////////////////////////////////////////////
 //DESCENDING
 
-var desc201509 = norm(toDB.toDB(desc201509))
-var desc201512 = norm(toDB.toDB(desc201512))
-var desc201609 = norm(toDB.toDB(desc201609))
-var desc201612 = norm(toDB.toDB(desc201612))
-var desc201708 = norm(toDB.toDB(desc201708))
-var desc201712 = norm(toDB.toDB(desc201712))
-var desc201809 = norm(toDB.toDB(desc201809))
-var desc201812 = norm(toDB.toDB(desc201812))
-var desc201909 = norm(toDB.toDB(desc201909))
-var desc202001 = norm(toDB.toDB(desc202001))
-var desc202009 = norm(toDB.toDB(desc202009))
-var desc202012 = norm(toDB.toDB(desc202012))
+var desc201509 = norm.normDESC(toDB.toDB(desc201509))
+var desc201512 = norm.normDESC(toDB.toDB(desc201512))
+var desc201609 = norm.normDESC(toDB.toDB(desc201609))
+var desc201612 = norm.normDESC(toDB.toDB(desc201612))
+var desc201708 = norm.normDESC(toDB.toDB(desc201708))
+var desc201712 = norm.normDESC(toDB.toDB(desc201712))
+var desc201809 = norm.normDESC(toDB.toDB(desc201809))
+var desc201812 = norm.normDESC(toDB.toDB(desc201812))
+var desc201909 = norm.normDESC(toDB.toDB(desc201909))
+var desc202001 = norm.normDESC(toDB.toDB(desc202001))
+var desc202009 = norm.normDESC(toDB.toDB(desc202009))
+var desc202012 = norm.normDESC(toDB.toDB(desc202012))
 
 
 var tot201509desc = ee.Image.cat ([desc201509, desc201509dec, s2201509]).clip(ancona)
@@ -307,8 +306,8 @@ tot202012desc])
 var desc_class = desc.map(classifierASC)
 var desc_val = desc.map(validationASC)
 var desc_trainingAcc = desc.map(accuracyClassASC)
-var asc_countTrain = asc.map(countTrain)
-var asc_countTot = asc.map(countTot)
+var desc_countTrain = desc.map(countTrain)
+var desc_countTot = desc.map(countTot)
 
 print(desc_countTot,'number of pixel for image')
 print(desc_countTrain,'number of pixel for training set')
