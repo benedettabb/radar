@@ -1,61 +1,99 @@
-//area d'interesse
+//HYDRO2
+var geometry = ee.Geometry.Polygon( 
+        [[[12.351986779678068, 43.11728059713532],
+          [12.351868762481411, 43.11723752343003],
+          [12.352000190723142, 43.11705543879513],
+          [12.352123572337828, 43.1171063442315]]]);
+          
+          
+//HYDRO1
+/*var geometry = ee.Geometry.Polygon( 
+        [[[12.352069261089568, 43.117033562361215],
+          [12.352069261089568, 43.11672617083199],
+          [12.35253596545816, 43.11672617083199],
+          [12.35253596545816, 43.117033562361215]]], null, false);    */
+          
+var station = ee.Geometry.Point([12.35196, 43.11722]);
+
+Map.addLayer(station,{},'station');
+Map.centerObject(geometry, 14)
+
+
+
+//region of interest
 var region = require("users/bene96detta/radar:preprocessing/area");
 region = region.addRegion();
 
+//angle normalization
+var norm = require("users/bene96detta/radar:preprocessing/angleNormalization");
+
+//terrain correction
+var terrainCorr = require("users/bene96detta/radar:preprocessing/terrainNorm");
+
+//to decibel
+var toDB = require("users/bene96detta/radar:preprocessing/from_to_dB")
+
+
+
+
 //Sentinel-1 GRD
-var coll =ee.ImageCollection("COPERNICUS/S1_GRD")  
-  .filterBounds(region) 
-  .filterDate("2015-08-01","2015-11-01") 
-  .select("VV","angle") 
+var coll =ee.ImageCollection("COPERNICUS/S1_GRD_FLOAT")  
+  .filterBounds(station) 
+  .filterDate("2015-08-01","2015-09-01")   
   .map(function(img){  
   var vv = img.select("VV")
-  var mask = vv.gt(-40) //1 dove VV>-40 e 0 dove VV<-40 
+  var mask = vv.gt(-40) 
   return img.updateMask(mask)}) 
 
-//regressione lineare
-var linearfit=coll.select(["angle", "VV"]) 
-  .reduce(ee.Reducer.linearFit()); 
-var beta=linearfit.select("scale"); //'beta'=pendenza 
+//topography correction
+var corr = coll.map(terrainCorr.corr2)
+//decibels
+var db = corr.map(toDB.toDB)
+//normalization
+var norm = db.map(norm.normASC).select(["VV_norm"])
 
-//funzione di normalizzazione
-var norm = function(image){  
-  var VVnorm = image.select("VV").subtract(beta.multiply(image.select("angle").subtract(40))).rename("VV_norm")
-  return image.addBands(VVnorm); }; 
-  
-//normalizzazione di ogni immagine contenuta nella collezione 
-var VVnorm = coll.map(norm); 
 
-var s1 = VVnorm.select(["VV_norm"]).map(
-  function(img){return img.clip(region)
-  });
-
-var driest=s1.min(); 
-var wettest=s1.max();  
+var driest=norm.min(); 
+var wettest=norm.max();  
 
 var SMmax=0.35; 
 var SMmin=0.05;
 
 var moistureVol =function (image){ 
   var sensitivity=wettest.subtract(driest);
-  //umidita' relativa
+  //relative soil moisture
   var mr = image.subtract(driest).divide(sensitivity) 
-  //umidita' volumetrica
+  //volumetri soil moisture
   var mv = mr.multiply(SMmax-SMmin).add(SMmin) 
   return image.addBands(mv).rename("VV_norm","moisture")} 
 
-var coll_hum = s1.map(moistureVol); 
+var coll_hum = norm.map(moistureVol); 
 var SSM = coll_hum.select("moisture");
 
-//visualizzazione delle prime 5 immagini di umidità
+//visualize first 5
 var list = SSM.toList(5); 
 var visParams = {
   bands: ["moisture"],
   min: 0,
   max: 1
 };
-// ciclo client side 
+// client side loop 
 for(var i = 0; i < 5; i++){
   var image = ee.Image(list.get(i));
   var string = "moisture" + i.toString()
-  Map.addLayer(image, visParams, string)
+  Map.addLayer(image, visParams, string,0)
 }
+
+var mean = function (img){
+  var mean = img.reduceRegion({
+    reducer: ee.Reducer.mean(), 
+    geometry:geometry, 
+    scale:10
+  })
+  return img.set('mean',mean)
+}
+
+var meanSSM = SSM.map(mean);
+
+print(meanSSM)
+
