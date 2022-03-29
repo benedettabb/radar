@@ -1,88 +1,99 @@
 //https://code.earthengine.google.com/44a1d10e3dbe1731f30d4e2ab70e8d5d//
-//da Angular-Based Radiometric Slope Correction for Sentinel-1 on Google Earth Engine, Andreas Vollrath, Adugna Mullissa and Johannes Reiche
+//Angular-Based Radiometric Slope Correction for Sentinel-1 on Google Earth Engine, Andreas Vollrath, Adugna Mullissa and Johannes Reiche
 
 
-//è richiesta l'area di interesse (solo per fornire una geometria per ritagliare l'SRTM)
-//cambiare path se necessario!
-var roi = require("users/bene96detta/AnalysisReadyData:preprocessing/area");
-roi = roi.addRegion();
-
-//funzione che, a partire da un'immagine radar, restituisce come output la stessa immagine con valori radiometrici normalizzati rispetto alla topografia del terreno
-exports.terrainCorrection = function (image) { 
-  var srtm = ee.Image('USGS/SRTMGL1_003').clip(roi); // 30m srtm 
-  //sigma0Pow = NORMALIZER RADAR CROSS SECTION
-  var sigma0Pow = ee.Image.constant(10).pow(image.divide(10.0));
-
-  /*RADAR GEOMETRY
-  θi = INCIDENT ANGLE: angolo tra la normale alla superficie e la direzione del backscatter*/
-  var theta_i = image.select('angle');
-  // ϕi = RANGE DIRECTION: angolo orizzontale piano rispetto al nord
-  var phi_i = ee.Terrain.aspect(theta_i)
-    .reduceRegion(ee.Reducer.mean(), roi, 1000)
-    .get('aspect');
-
+exports.corr = function (img) {
+  var elevation = ee.Image('USGS/SRTMGL1_003').select('elevation')
+  var ninetyRad = ee.Image.constant(90).multiply(Math.PI/180);
+  //RADAR GEOMETRY
+  var heading = (ee.Terrain.aspect(img.select('angle')).reduceRegion(ee.Reducer.mean(), table, 1000).get('aspect'));
+  var theta_iRad = img.select('angle').multiply(Math.PI/180)
+  var phi_iRad = ee.Image.constant(heading).multiply(Math.PI/180);
   //TERRAIN GEOMETRY
-  //αs = SLOPE: pendenza della superficie 
-  var alpha_s = ee.Terrain.slope(srtm).select('slope');
-  /*ϕs = ASPECT: orientamento della pendenza, misurata in senso orario, in gradi, dove
-  lo zero corrisponde al nord geografico, 90 gradi est, ecc*/
-  var phi_s = ee.Terrain.aspect(srtm).select('aspect');
+  var alpha_sRad = ee.Terrain.slope(elevation).select('slope').multiply(Math.PI/180);
+  var phi_sRad = ee.Terrain.aspect(elevation).select('aspect').multiply(Math.PI/180);
+    
+  //MODEL GEOMETRY
+  //reduce to 3 angle
+  var phi_rRad = phi_iRad.subtract(phi_sRad);
+  // slope steepness in range
+  var alpha_rRad = (alpha_sRad.tan().multiply(phi_rRad.cos())).atan();
+  // slope steepness in azimuth
+  var alpha_azRad = (alpha_sRad.tan().multiply(phi_rRad.sin())).atan();
+    
+  //FROM SIGMA 0 TO gamma 0
+  var vv = img.select('VV_filtered')
+  var vh = img.select('VH_filtered')
+  var gamma0vv = vv.divide(theta_iRad.cos());
+  var gamma0vh = vh.divide(theta_iRad.cos());
+  
+  //MODEL
+  var nominator = (ninetyRad.subtract(theta_iRad)).cos();
+  var denominator = alpha_azRad.cos().multiply((ninetyRad.subtract(theta_iRad).add(alpha_rRad)).cos());
+  var result = nominator.divide(denominator);
+  
+  //GAMMA FLAT
+  var gammafvv = gamma0vv.divide(result)
+  var gammafvh = gamma0vh.divide(result)
+  
+  
+  //MASK LAYOVER AND SHADOW
+  var layover = alpha_rRad.lt(theta_iRad).rename('layover');
+  var shadow = alpha_rRad.gt(ee.Image.constant(-1).multiply(ninetyRad.subtract(theta_iRad))).rename('shadow');
+  var mask = layover.and(shadow);
+  
+  var norm =  ee.Image.cat(gammafvv, gammafvh).addBands(img.select('angle'))
+  return norm.updateMask(mask)
+};
 
-  // MODEL GEOMETRY
-  // questi 4 angoli vengono ridotti a 3: θi, αs, ϕr = direzione della pendenza rispetto alla range direction
-  var phi_r = ee.Image.constant(phi_i).subtract(phi_s);
-
-  // conversione in radianti
-  var phi_rRad = phi_r.multiply(Math.PI / 180);
-  var alpha_sRad = alpha_s.multiply(Math.PI / 180);
-  var theta_iRad = theta_i.multiply(Math.PI / 180);
-  var ninetyRad = ee.Image.constant(90).multiply(Math.PI / 180);
-
-  // αr = pendenza nella range direction --------- αr =arctan(tan(αs)cos(ϕr));
-  var alpha_r = (alpha_sRad.tan().multiply(phi_rRad.cos())).atan();
-
-  // αaz = pendenza nella azimut direction ---------- αaz =arctan(tan(αs)sin(ϕr));
-  var alpha_az = (alpha_sRad.tan().multiply(phi_rRad.sin())).atan();
-
-  // quindi l'angolo d'incidenza -----cos(θΔ)=cos(αaz)cos(θi-αr)
-  var theta_lia = (alpha_az.cos().multiply((theta_iRad.subtract(alpha_r)).cos())).acos();
-  var theta_liaDeg = theta_lia.multiply(180 / Math.PI);
 
 
-  // Gamma_nought_flat = coefficiente di backscattering con terreno piatto
-  var gamma0 = sigma0Pow.divide(theta_iRad.cos());
-  var gamma0dB = ee.Image.constant(10).multiply(gamma0.log10());
-  var ratio_1 = gamma0dB.select('VV').subtract(gamma0dB.select('VH'));
 
-  // Volumetric Model
-  //γ0f=γ0tan(90−θi)/tan(90−θi+αr)
-  var nominator = (ninetyRad.subtract(theta_iRad).add(alpha_r)).tan();
-  var denominator = (ninetyRad.subtract(theta_iRad)).tan();
-  /*rapporto tra il volume osservato in un terreno inclinato e il volume che 
-  sarebbe osservato se il terreno fosse piatto*/
-  var volModel = (nominator.divide(denominator)).abs();
+//the same terrain normalization but for Snap decomposed S1 SLC data
+exports.corrSNAP = function (img) {
+  var elevation = ee.Image('USGS/SRTMGL1_003').select('elevation')
+  var ninetyRad = ee.Image.constant(90).multiply(Math.PI/180);
+  //RADAR GEOMETRY
+  var heading = (ee.Terrain.aspect(img.select('angle')).reduceRegion(ee.Reducer.mean(), table, 1000).get('aspect'));
+  var theta_iRad = img.select('angle').multiply(Math.PI/180)
+  var phi_iRad = ee.Image.constant(heading).multiply(Math.PI/180);
+  //TERRAIN GEOMETRY
+  var alpha_sRad = ee.Terrain.slope(elevation).select('slope').multiply(Math.PI/180);
+  var phi_sRad = ee.Terrain.aspect(elevation).select('aspect').multiply(Math.PI/180);
+    
+  //MODEL GEOMETRY
+  //reduce to 3 angle
+  var phi_rRad = phi_iRad.subtract(phi_sRad);
+  // slope steepness in range
+  var alpha_rRad = (alpha_sRad.tan().multiply(phi_rRad.cos())).atan();
+  // slope steepness in azimuth
+  var alpha_azRad = (alpha_sRad.tan().multiply(phi_rRad.sin())).atan();
+    
+  //FROM SIGMA 0 TO gamma 0
+  var vv = img.select('b2')
+  var vh = img.select('b1')
+  var gamma0vv = vv.divide(theta_iRad.cos());
+  var gamma0vh = vh.divide(theta_iRad.cos());
+  
+  //MODEL
+  var nominator = (ninetyRad.subtract(theta_iRad)).cos();
+  var denominator = alpha_azRad.cos().multiply((ninetyRad.subtract(theta_iRad).add(alpha_rRad)).cos());
+  var result = nominator.divide(denominator);
+  
+  //GAMMA FLAT
+  var gammafvv = gamma0vv.divide(result)
+  var gammafvh = gamma0vh.divide(result)
+  
+  
+  //MASK LAYOVER AND SHADOW
+  var layover = alpha_rRad.lt(theta_iRad).rename('layover');
+  var shadow = alpha_rRad.gt(ee.Image.constant(-1).multiply(ninetyRad.subtract(theta_iRad))).rename('shadow');
+  var mask = layover.and(shadow);
+  
+  var norm =  ee.Image.cat(gammafvv, gammafvh).addBands(img.select('angle'))
+  return norm.updateMask(mask)
+};
 
-  // applica il modello
-  var gamma0_Volume = gamma0.divide(volModel);
-  var gamma0_VolumeDB = ee.Image.constant(10).multiply(gamma0_Volume.log10());
 
-  // maschera per layover/shadow 
-  // LAYOVER =  slope > θi
-  var alpha_rDeg = alpha_r.multiply(180 / Math.PI);
-  var layover = alpha_rDeg.lt(theta_i);
 
-  // SHADOWS = LIA > 90
-  var shadow = theta_liaDeg.lt(85);
-
-  // calcolo del rapporto per la visualizzazione in RGB
-  var ratio = gamma0_VolumeDB.select('VV').subtract(gamma0_VolumeDB.select('VH'));
-
-  var output = gamma0_VolumeDB.addBands(ratio).addBands(alpha_r).addBands(phi_s).addBands(theta_iRad)
-    .addBands(layover).addBands(shadow).addBands(gamma0dB).addBands(ratio_1);
-
-  return image.addBands(
-    output.select(['VV', 'VH'], ['VV', 'VH']),
-    null,
-    true
-  );
-}
+        
