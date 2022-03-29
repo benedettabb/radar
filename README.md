@@ -3,16 +3,16 @@
 ## Table of Contents
 1. Preprocessing: functions to pre-process data.
 2. Data: 
-* sentinel1GRDasc/desc requires 
+* sentinel1GRDasc/desc requires:
       > area
       > filterFunction
       > span_ratio
       > terrainNorm
- * sentinel1SLCascDEC/descDEC requires
+ * sentinel1SLCascDEC/descDEC requires:
        > area
        > filterFunction
        > mask0values
-* sentinel2 requires
+* sentinel2 requires:
        > area
        > ndvi
  3. Classification
