@@ -1,6 +1,6 @@
 //import GRD SLC e Sentinel2 preprocessed
 //pick your training data
-
+//import shapefile of Ancona
 
 //to db
 var toDB = require("users/bene96detta/radar:preprocessing/from_to_dB")
@@ -24,7 +24,7 @@ var asc202009 = norm.normASC(toDB.toDB(asc202009))
 var asc202012 = norm.normASC(toDB.toDB(asc202012))
 
 
-//combine GRD SLC e Sentienel2
+//combine GRD SLC e Sentienel2 //clip with shape file of ancona province
 var tot201509asc = ee.Image.cat ([asc201509, asc201509dec, s2201509]).clip(ancona)
 var tot201512asc = ee.Image.cat ([asc201512, asc201512dec, s2201512]).clip(ancona)
 var tot201609asc = ee.Image.cat ([asc201609, asc201609dec, s2201609]).clip(ancona)
