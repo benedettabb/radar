@@ -94,7 +94,7 @@ Export.image.toAsset ({
   description: 'desc201410',
   assetId: 'desc201410',
   scale:10,
-  region: table,
+  region: region,
   maxPixels:10e10,
   crs: 'EPSG:4326'})
  
