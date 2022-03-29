@@ -301,7 +301,7 @@ var desc_class = desc.map(classifier)
 var desc_val = desc.map(validation)
 var desc_trainingAcc = desc.map(accuracyClass)
 var desc_countTrain = desc.map(countTrain)
-var esc_countTot = desc.map(countTot)
+var desc_countTot = desc.map(countTot)
 
 print(desc_countTot,'number of pixel for image')
 print(desc_countTrain,'number of pixel for training set')
