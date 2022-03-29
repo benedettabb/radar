@@ -23,9 +23,7 @@
 * EXPORT TO ASSET
 ***
  3. Classification 
-  * requires:
-       > from_to_db
-       > angleNormalization
+  * requires: >from_to_dB >angleNormalization
 * EXPORT TO ASSET
 ***
 
