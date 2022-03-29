@@ -17,9 +17,10 @@
        >filterFunction
        >mask0values
 * sentinel2 requires:
-       > area
-       > ndvi
+       > area***
+       > ndvi***
 * EXPORT TO ASSET
+***
  3. Classification requires:
        > from_to_db
        > angleNormalization
