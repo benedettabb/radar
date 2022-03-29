@@ -1,4 +1,5 @@
 //import SLC GRD e Sentinel2 data
+//pick your training data
 //import shape file of Ascoli Piceno
 
 //to db
