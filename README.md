@@ -1,5 +1,19 @@
-## Stima   dell’umidità   del   suolo nelle   aree   agricole   marchigiane mediante   dati   SAR
+## Soil moisture estimation in agricoltural field of Marche region
 
+Preprocessing: functions to pre-process data.
+Data: 
+sentinel1GRDasc/desc requires 
+      - area
+      -filterFunction
+      -span_ratio
+      -terrainNorm
+ sentinel1SLCascDEC/descDEC requires
+       - area
+       - filterFunction
+       - mask0values
+sentinel2 requires
+       - area
+       - ndvi
 
 ![image](https://github.com/benedettabb/agricolture-moisture-Marche/blob/f7cf75604f8a211d90f73f504ae89c8090657450/MARCHE/img.jpg)
 
