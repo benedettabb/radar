@@ -4,10 +4,10 @@
 1. Preprocessing: functions to pre-process data.
 2. Data: 
 * sentinel1GRDasc/desc requires 
-      * - area
-      * -filterFunction
-      * -span_ratio
-      * -terrainNorm
+      *area
+      *filterFunction
+      *span_ratio
+      *terrainNorm
  * sentinel1SLCascDEC/descDEC requires
        * - area
        * - filterFunction
