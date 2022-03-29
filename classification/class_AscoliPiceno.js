@@ -207,7 +207,7 @@ var classiASC = ee.Classifier.smileRandomForest({
   features: training1,
   classProperty: 'landcover',
   inputProperties: bands})
-var classified = tot201512desc.select(bands).classify(classiASC)
+var classified = tot201512.select(bands).classify(classiASC)
 var dict = classiASC.explain();
 var variable_importance = ee.Feature(null, ee.Dictionary(dict).get('importance'));
 var chartASC =
