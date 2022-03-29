@@ -1,31 +1,19 @@
-//GRD di Google Earth Engine
-//ORBITE DISCENDENTI
 
-//importare i moduli (cambiare path)
+//GRD DESCENDING
 
-//area d'interesse
+//area of interest
 var region = require("users/bene96detta/radar:preprocessing/area");
 region = region.addRegion();
-
-//funzione per convertire to/from dB
-var from_to_dB = require("users/bene96detta/radar:preprocessing/from_to_dB")
-
-//refined lee filter
-var lee = require ("users/bene96detta/radar:preprocessing/refinedLeeFilter");
 
 //filter function
 var filter = require ("users/bene96detta/radar:preprocessing/filterFunction");
 
-//richiamo la funzione per aggiungere le bande SPAN e RATIO
+//add SPAN e RATIO
 var sr = require("users/bene96detta/radar:preprocessing/span_ratio")
 
-//richiamo la funzione per normalizzare l'immagine
+//terrain correction
 var tN = require("users/bene96detta/radar:preprocessing/terrainNorm")
 
-//clip collection
-var cc = function(image){return image.clip(region)}
-
-//normalizzazione di ogni immagine + filtro per lo speckle
 
 //PATH 95
 var p95ott2014 = tN.corr(filter.filterFunction(ee.Image ("COPERNICUS/S1_GRD_FLOAT/S1A_IW_GRDH_1SDV_20141012T051913_20141012T051938_002792_003250_68A8"))).clip(region)
@@ -56,8 +44,8 @@ var p22ago2015= ee.ImageCollection ([p22ago2015_1, p22ago2015_2]).mean()
 var p22dic2015_1 = tN.corr(filter.filterFunction(ee.Image("COPERNICUS/S1_GRD_FLOAT/S1A_IW_GRDH_1SDV_20151225T051051_20151225T051116_009194_00D3ED_5016"))).clip(region)
 var p22dic2015_2 = tN.corr(filter.filterFunction(ee.Image("COPERNICUS/S1_GRD_FLOAT/S1A_IW_GRDH_1SDV_20151225T051116_20151225T051141_009194_00D3ED_597E"))).clip(region)
 var p22dic2015= ee.ImageCollection ([p22dic2015_1, p22dic2015_2]).mean()
-var p22ago2016_1 = tN.corr(filter.filterFunction(ee.Image('COPERNICUS/S1_GRD_FLOAT/S1A_IW_GRDH_1SDV_20160821T051053_20160821T051118_012694_013F33_F3AB'))).clip(region)
-var p22ago2016_2 = tN.corr(filter.filterFunction(ee.Image('COPERNICUS/S1_GRD_FLOAT/S1A_IW_GRDH_1SDV_20160821T051118_20160821T051143_012694_013F33_90A0'))).clip(region)
+var p22ago2016_1 = tN.corr(filter.filterFunction(ee.Image('COPERNICUS/S1_GRD_FLOAT/S1A_IW_GRDH_1SDV_20160827T170543_20160827T170608_012789_014270_EEA8'))).clip(region)
+var p22ago2016_2 = tN.corr(filter.filterFunction(ee.Image('COPERNICUS/S1_GRD_FLOAT/S1A_IW_GRDH_1SDV_20160827T170608_20160827T170633_012789_014270_8531'))).clip(region)
 var p22ago2016 = ee.ImageCollection ([p22ago2016_1, p22ago2016_2]).mean()
 var p22dic2016 = tN.corr(filter.filterFunction(ee.Image("COPERNICUS/S1_GRD_FLOAT/S1A_IW_GRDH_1SDV_20161231T051117_20161231T051142_014619_017C44_4ECF"))).clip(region)
 var p22ago2017_1 = tN.corr(filter.filterFunction(ee.Image("COPERNICUS/S1_GRD_FLOAT/S1B_IW_GRDH_1SDV_20170822T051026_20170822T051051_007048_00C6A3_8FAC"))).clip(region)
@@ -84,7 +72,6 @@ var p22dic2020_2 = tN.corr(filter.filterFunction(ee.Image("COPERNICUS/S1_GRD_FLO
 var p22dic2020= ee.ImageCollection ([p22dic2020_1, p22dic2020_2]).mean()
 
 
-//mosaici
 var desc2014ott = sr.span_ratioGEE(ee.ImageCollection ([p95ott2014, p22ott2014]).mean())
 var desc2014dic = sr.span_ratioGEE(ee.ImageCollection([p95dic2014, p22dic2014]).mean())
 var desc2015set = sr.span_ratioGEE(ee.ImageCollection([p95set2015,p22ago2015]).mean())
@@ -100,5 +87,15 @@ var desc2020gen = sr.span_ratioGEE(ee.ImageCollection([p95gen2020,p22gen2020]).m
 var desc2020set = sr.span_ratioGEE(ee.ImageCollection([p95set2020,p22set2020]).mean())
 var desc2020dic = sr.span_ratioGEE(ee.ImageCollection([p95dic2020,p22dic2020]).mean())
 
-//creo una image collection
-var descGEE = ee.ImageCollection([desc2014ott,  desc2014dic, desc2015set, desc2015dic, desc2016ago, desc2016dic,  desc2017ago, desc2017dic, desc2018set, desc2018dic, desc2019set, desc2020gen, desc2020set,  desc2020dic])
+
+//Export
+Export.image.toAsset ({
+  image:desc2014ott,
+  description: 'desc201410',
+  assetId: 'desc201410',
+  scale:10,
+  region: table,
+  maxPixels:10e10,
+  crs: 'EPSG:4326'})
+ 
+ //...
