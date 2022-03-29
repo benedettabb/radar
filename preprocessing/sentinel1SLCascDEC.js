@@ -19,8 +19,8 @@ var clip = function(img){
 var remove4 = function (img){
   return img.select(['b1','b2','b3'])};
   
-//richiamo la funzione per normalizzare l'immagine
-var tN = require("users/bene96detta/radar:preprocessing/terrainNorm") //controllare angolo
+//terrain normalization
+var tN = require("users/bene96detta/radar:preprocessing/terrainNorm")
 
 
 var angle44 = ee.Image("COPERNICUS/S1_GRD_FLOAT/S1A_IW_GRDH_1SDV_20141020T165729_20141020T165754_002916_0034E5_CDA3").select('angle')
