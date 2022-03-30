@@ -18,10 +18,6 @@ var station = ee.Geometry.Point([12.35196, 43.11722]);
 Map.addLayer(station,{},'station');
 Map.centerObject(geometry, 14)
 
-
-//angle normalization
-var norm = require("users/bene96detta/radar:preprocessing/angleNormalization");
-
 //Sentinel-1 GRD
 var coll =ee.ImageCollection("COPERNICUS/S1_GRD")  
   .filterBounds(station) 
