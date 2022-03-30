@@ -1,4 +1,13 @@
-//import land cover classification for 2015/09 (variable called 'an')
+//import land cover classification for 2015/09 
+var an = ee.Image("users/bene96detta/classASC/asc202009an");
+
+var geometry = ee.Geometry.Polygon(
+        [[[13.371809900785982, 43.54019105429452],
+          [13.372389257933198, 43.54054880628671],
+          [13.370962322676364, 43.54163760368871],
+          [13.370415152098237, 43.54101543612983],
+          [13.371766985441743, 43.54015994532531]]]);
+          
 
 //assam station
 var station = ee.Geometry.Point([13.371661467311311,43.53964124588689])
