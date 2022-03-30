@@ -5,9 +5,9 @@ var geometry = ee.Geometry.Polygon(
           [12.352000190723142, 43.11705543879513],
           [12.352123572337828, 43.1171063442315]]]);
           
-          
+/*          
 //HYDRO1
-/*var geometry = ee.Geometry.Polygon( 
+var geometry = ee.Geometry.Polygon( 
         [[[12.352069261089568, 43.117033562361215],
           [12.352069261089568, 43.11672617083199],
           [12.35253596545816, 43.11672617083199],
@@ -19,25 +19,11 @@ Map.addLayer(station,{},'station');
 Map.centerObject(geometry, 14)
 
 
-
-//region of interest
-var region = require("users/bene96detta/radar:preprocessing/area");
-region = region.addRegion();
-
 //angle normalization
 var norm = require("users/bene96detta/radar:preprocessing/angleNormalization");
 
-//terrain correction
-var terrainCorr = require("users/bene96detta/radar:preprocessing/terrainNorm");
-
-//to decibel
-var toDB = require("users/bene96detta/radar:preprocessing/from_to_dB")
-
-
-
-
 //Sentinel-1 GRD
-var coll =ee.ImageCollection("COPERNICUS/S1_GRD_FLOAT")  
+var coll =ee.ImageCollection("COPERNICUS/S1_GRD")  
   .filterBounds(station) 
   .filterDate("2015-08-01","2015-09-01")   
   .map(function(img){  
@@ -45,13 +31,9 @@ var coll =ee.ImageCollection("COPERNICUS/S1_GRD_FLOAT")
   var mask = vv.gt(-40) 
   return img.updateMask(mask)}) 
 
-//topography correction
-var corr = coll.map(terrainCorr.corr2)
-//decibels
-var db = corr.map(toDB.toDB)
-//normalization
-var norm = db.map(norm.normASC).select(["VV_norm"])
 
+//normalization
+var norm = coll.map(norm.normASC).select(["VV_norm"])
 
 var driest=norm.min(); 
 var wettest=norm.max();  
@@ -96,4 +78,3 @@ var mean = function (img){
 var meanSSM = SSM.map(mean);
 
 print(meanSSM)
-
