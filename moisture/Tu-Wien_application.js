@@ -70,3 +70,28 @@ for(var i = 0; i < 5; i++){
 
 //rainfall precipitation
 
+
+var mean = function (img){
+  var mean = img.reduceRegion({
+    reducer: ee.Reducer.mean(), 
+    geometry:geometry, 
+    scale:10
+  })
+  return img.set('mean',mean)
+}
+
+var meanSSM = SSM_masked.map(mean);
+print(meanSSM)
+
+var meanSSM = meanSSM.map(function(img){
+  var date = ee.Date(img.get('system:time_start')).format(null, 'GMT')
+  return img.set('date',date)
+});
+
+var wanted = ['mean', 'date'];
+var augmented = meanSSM.map(function (image) {
+  return image.set('dict', image.toDictionary(wanted));
+});
+
+var list = augmented.aggregate_array('dict');
+print(list);
