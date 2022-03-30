@@ -27,8 +27,8 @@
 * EXPORT TO ASSET
 ***
  4. Moisture
-   * Tu Wien
-   * Water Cloud Model
+   * Tu Wien (validation > application)
+   * Water Cloud Model (validation)
 ***
  5.ShapeFile: MARCHE, ascoli_piceino_shp, fermo_shp, macerata_shp, ancona_shp, pesaro_urbino_shp
 ***
