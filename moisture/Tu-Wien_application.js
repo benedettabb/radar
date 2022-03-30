@@ -1,3 +1,4 @@
+//import land cover classification for 2015/09 (variable called 'an')
 
 //assam station
 var station = ee.Geometry.Point([13.371661467311311,43.53964124588689])
@@ -57,4 +58,6 @@ for(var i = 0; i < 5; i++){
   Map.addLayer(image, visParams, string,0)
 }
 
+
+//rainfall precipitation
 
