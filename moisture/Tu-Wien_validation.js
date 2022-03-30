@@ -52,20 +52,6 @@ var moistureVol =function (image){
 var coll_hum = norm.map(moistureVol); 
 var SSM = coll_hum.select("moisture");
 
-//visualize first 5
-var list = SSM.toList(5); 
-var visParams = {
-  bands: ["moisture"],
-  min: 0,
-  max: 1
-};
-// client side loop 
-for(var i = 0; i < 5; i++){
-  var image = ee.Image(list.get(i));
-  var string = "moisture" + i.toString()
-  Map.addLayer(image, visParams, string,0)
-}
-
 var mean = function (img){
   var mean = img.reduceRegion({
     reducer: ee.Reducer.mean(), 
