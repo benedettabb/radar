@@ -1,30 +1,20 @@
-//HYDRO2
-/*var geometry = ee.Geometry.Polygon( 
-        [[[12.351986779678068, 43.11728059713532],
-          [12.351868762481411, 43.11723752343003],
-          [12.352000190723142, 43.11705543879513],
-          [12.352123572337828, 43.1171063442315]]]);
-          */
-          
-//HYDRO1
-var geometry = ee.Geometry.Polygon( 
-        [[[12.352069261089568, 43.117033562361215],
-          [12.352069261089568, 43.11672617083199],
-          [12.35253596545816, 43.11672617083199],
-          [12.35253596545816, 43.117033562361215]]]);    
-          
-var station = ee.Geometry.Point([12.35196, 43.11722]);
+var station2 = ee.Geometry.Point([12.35196, 43.11722]);
+var station1 = ee.Geometry.Point([12.35240, 43.11697]);
 
-Map.addLayer(station,{},'station');
-Map.centerObject(geometry, 14)
+
+Map.addLayer(station1,{},'station1');
+Map.addLayer(station2,{},'station2');
+
+Map.centerObject(station1, 14)
+
 
 //Sentinel-1 GRD
 var coll =ee.ImageCollection("COPERNICUS/S1_GRD")  
-  .filterBounds(station) 
+  .filterBounds(station1) 
   .filterDate("2015-08-01","2015-09-01")   
 
 var collection=ee.ImageCollection('COPERNICUS/S1_GRD')
-.filterBounds(station)
+.filterBounds(station1)
 .filterDate('2015-01-01','2016-01-01');
 var linearfit=collection.select(['angle', 'VV']).reduce(ee.Reducer.linearFit()); 
 var beta=linearfit.select('scale');
@@ -38,7 +28,7 @@ var norm = coll.map(normalization).select('VV_1').map(function(img){return img.r
 //Map.addLayer(norm.first(),{min:-20},'normalized')
 
 var s2 = ee.ImageCollection("COPERNICUS/S2") 
-  .filterBounds(station) 
+  .filterBounds(station1) 
   .filterDate("2015-08-01","2015-09-01") 
   .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 30)) 
   .map(function (img) { 
@@ -141,7 +131,7 @@ var mean = function (image){
   var img = ee.Image(image)
   var mean = img.reduceRegion({
     reducer: ee.Reducer.mean(), 
-    geometry:geometry, 
+    geometry:station2, 
     scale:10
   })
   return img.set('mean',mean)
