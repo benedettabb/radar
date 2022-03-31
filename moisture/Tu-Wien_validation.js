@@ -6,10 +6,6 @@ var station1 = ee.Geometry.Point([12.35240, 43.11697]);
 Map.addLayer(station1,{},'station1');
 Map.addLayer(station2,{},'station2');
 
-Map.addLayer(geometry1SMALL,{},'geometry1small')
-Map.addLayer(geometry2SMALL,{},'geometry2small')
-
-
 //angle normalization
 var norm = require("users/bene96detta/radar:preprocessing/angleNormalization");
 var corr = require("users/bene96detta/radar:preprocessing/terrainNorm");
@@ -46,7 +42,7 @@ var SSM = coll_hum.select("moisture");
 var mean = function (img){
   var mean = img.reduceRegion({
     reducer: ee.Reducer.mean(), 
-    geometry:station1, 
+    geometry:station1, //change with station 2
     scale:10
   })
   return img.set('mean',mean)
