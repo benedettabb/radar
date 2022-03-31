@@ -131,7 +131,7 @@ var mean = function (image){
   var img = ee.Image(image)
   var mean = img.reduceRegion({
     reducer: ee.Reducer.mean(), 
-    geometry:station2, 
+    geometry:station1, //change with station2
     scale:10
   })
   return img.set('mean',mean)
