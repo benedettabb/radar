@@ -1,45 +1,36 @@
-//HYDRO2
-var geometry = ee.Geometry.Polygon( 
-        [[[12.351986779678068, 43.11728059713532],
-          [12.351868762481411, 43.11723752343003],
-          [12.352000190723142, 43.11705543879513],
-          [12.352123572337828, 43.1171063442315]]]);
-          
-/*          
-//HYDRO1
-var geometry = ee.Geometry.Polygon( 
-        [[[12.352069261089568, 43.117033562361215],
-          [12.352069261089568, 43.11672617083199],
-          [12.35253596545816, 43.11672617083199],
-          [12.35253596545816, 43.117033562361215]]], null, false);    */
-          
-var station = ee.Geometry.Point([12.35196, 43.11722]);
 
-Map.addLayer(station,{},'station');
-Map.centerObject(geometry, 14)
+var station2 = ee.Geometry.Point([12.35196, 43.11722]);
+var station1 = ee.Geometry.Point([12.35240, 43.11697]);
+
+
+Map.addLayer(station1,{},'station1');
+Map.addLayer(station2,{},'station2');
+
+Map.addLayer(geometry1SMALL,{},'geometry1small')
+Map.addLayer(geometry2SMALL,{},'geometry2small')
 
 
 //angle normalization
 var norm = require("users/bene96detta/radar:preprocessing/angleNormalization");
+var corr = require("users/bene96detta/radar:preprocessing/terrainNorm");
 
 //Sentinel-1 GRD
 var coll =ee.ImageCollection("COPERNICUS/S1_GRD")  
-  .filterBounds(station) 
+  .filterBounds(station2) 
   .filterDate("2015-08-01","2015-09-01")   
   .map(function(img){  
   var vv = img.select("VV")
   var mask = vv.gt(-40) 
   return img.updateMask(mask)}) 
-
-
+  //.map(corr.corr2)
 //normalization
-var norm = coll.map(norm.normASC).select(["VV_norm"])
+var norm = coll.map(norm.normUMBRIA).select(["VV_norm"])
 
 var driest=norm.min(); 
 var wettest=norm.max();  
 
-var SMmax=0.35; 
-var SMmin=0.05;
+var SMmax=0.30; 
+var SMmin=0.09;
 
 var moistureVol =function (image){ 
   var sensitivity=wettest.subtract(driest);
@@ -55,7 +46,7 @@ var SSM = coll_hum.select("moisture");
 var mean = function (img){
   var mean = img.reduceRegion({
     reducer: ee.Reducer.mean(), 
-    geometry:geometry, 
+    geometry:station1, 
     scale:10
   })
   return img.set('mean',mean)
@@ -63,4 +54,29 @@ var mean = function (img){
 
 var meanSSM = SSM.map(mean);
 
-print(meanSSM)
+var list = SSM.toList(6); 
+var visParams = {
+  bands: ["moisture"],
+  min: 0.05,
+  max: 0.35
+};
+
+
+for(var i = 0; i < 6; i++){
+  var image = ee.Image(list.get(i));
+  var string = "moisture" + i.toString()
+  Map.addLayer(image, visParams, string,0)
+}
+
+var meanSSM = meanSSM.map(function(img){
+  var date = ee.Date(img.get('system:time_start')).format(null, 'GMT')
+  return img.set('date',date)
+});
+
+var wanted = ['mean', 'date'];
+var augmented = meanSSM.map(function (image) {
+  return image.set('dict', image.toDictionary(wanted));
+});
+
+var list = augmented.aggregate_array('dict');
+print(list);
